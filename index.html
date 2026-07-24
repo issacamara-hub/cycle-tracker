@@ -26,6 +26,7 @@
   --r-event:#1E7F4F;
   --r-other:#7B8499;
   --r-break:#5B7083;
+  --r-dayzero:#4A4EA8;
   --ev-hw:#3E8E5A;
   --ev-quiz:#E19B00;
   --ev-test:#7B5CD6;
@@ -172,6 +173,8 @@ header .sub{font-size:.72rem;color:#AEB9D2;font-weight:500;letter-spacing:.08em;
   background:var(--blue-soft);color:var(--blue);
 }
 .cal-cell .cchip.pe{background:var(--pe);color:#fff}
+.cal-cell .cchip.d0{background:var(--r-dayzero);color:#fff}
+.cal-cell.dayzero{background:#EDEEF9}
 .cal-cell.noclass{background:var(--grey-day)}
 .cal-cell.noclass .dnum{color:var(--muted);text-decoration:line-through}
 .cal-cell .remoji{font-size:.85rem;line-height:1}
@@ -205,6 +208,7 @@ header .sub{font-size:.72rem;color:#AEB9D2;font-weight:500;letter-spacing:.08em;
 .rz-event{background:var(--r-event)}
 .rz-other{background:var(--r-other)}
 .rz-break{background:var(--r-break)}
+.rz-dayzero{background:var(--r-dayzero)}
 .empty-note{
   background:var(--card);border-radius:12px;box-shadow:var(--shadow);
   padding:22px 16px;text-align:center;color:var(--muted);font-size:.92rem;
@@ -399,6 +403,7 @@ footer{
       <span><span class="lg blue"></span>Cycle day</span>
       <span><span class="lg orange"></span>PE</span>
       <span><span class="lg grey"></span>No classes</span>
+      <span><span class="lg" style="background:var(--r-dayzero)"></span>Day 0</span>
     </div>
     <div class="cal-legend" id="evLegend"></div>
     <p class="hint" style="padding:0 4px">Tap any weekday to add homework, quizzes, tests, recitations, or exams — events follow the cycle day and shift automatically when classes are cancelled. Tap a day to mark it no-class too. Weekdays between terms show as “brk”.</p>
@@ -406,7 +411,7 @@ footer{
 
   <!-- ============ LOG ============ -->
   <section class="view" id="view-log">
-    <div class="section-title" style="margin-top:4px">No-class days on record</div>
+    <div class="section-title" style="margin-top:4px">No-class &amp; Day 0 records</div>
     <div class="log-list" id="logList"></div>
   </section>
 
@@ -476,7 +481,7 @@ footer{
       <p class="hint">Data lives only in this browser (localStorage). Backups from any older version import fine — they’re upgraded automatically. Export a copy now and then in case the browser clears it.</p>
     </div>
 
-    <footer>Cycle Day Tracker v1.9 · SY 2026–27 · data stays on this device</footer>
+    <footer>Cycle Day Tracker v2.0 · SY 2026–27 · data stays on this device</footer>
   </section>
 </div>
 
@@ -501,15 +506,16 @@ footer{
 (function(){
 "use strict";
 var KEY = "cycleTracker.v1";   /* same key since v1.0 — schema migrated in place */
-var VERSION_LABEL = "v1.9";
+var VERSION_LABEL = "v2.0";
 
 /* ---------------- no-class reasons ---------------- */
-var REASONS = ["Weather suspension","Holiday","School event","Term break","Other"];
+var REASONS = ["Weather suspension","Holiday","School event","Term break","Day 0","Other"];
 var RMETA = {
   "Weather suspension":{emoji:"🌧️", cls:"rz-weather", bg:"#3A7CA5"},
   "Holiday":{emoji:"🎉", cls:"rz-holiday", bg:"#8E44AD"},
   "School event":{emoji:"🏫", cls:"rz-event", bg:"#1E7F4F"},
   "Term break":{emoji:"🏖️", cls:"rz-break", bg:"#5B7083"},
+  "Day 0":{emoji:"0️⃣", cls:"rz-dayzero", bg:"#4A4EA8"},
   "Other":{emoji:"📌", cls:"rz-other", bg:"#7B8499"}
 };
 
@@ -697,6 +703,10 @@ function inDomain(s){
   var g = governingTerm(s);
   if(!g) return true;
   return !(g.end && s>g.end);
+}
+function isDayZero(s, nc){
+  var e = (nc||ncMap())[s];
+  return !!(e && e.reason==="Day 0");
 }
 function isBreakDay(s, nc){
   return isSchoolDay(s) && !(nc||ncMap())[s] && !inDomain(s);
@@ -929,6 +939,16 @@ function renderToday(){
       html += '<span class="'+cls+'"></span>';
     }
     html += '</div><div class="dots-caption">Cycle '+ci.cycle+' · square dots are PE</div>';
+  } else if(nc[t] && isSchoolDay(t) && nc[t].reason==="Day 0"){
+    var e0 = nc[t];
+    html += '<div class="eyebrow" style="color:var(--r-dayzero)">Cycle paused</div>';
+    html += '<div class="big-day" style="color:var(--r-dayzero)"><span class="big-word">DAY</span> 0</div>';
+    html += '<div class="cycle-line">Classes today, but the cycle does not advance'+(e0.note?" · "+esc(e0.note):"")+'</div>';
+    var nx0 = nextClassDay(t, nc);
+    if(nx0){
+      var nci0 = cycleInfo(nx0, nc);
+      html += '<div><span class="badge off">Cycle '+nci0.cycle+' Day '+nci0.day+' moves to '+human(nx0)+(isPEDay(nci0.day)?" 🏃 PE":"")+'</span></div>';
+    }
   } else if(nc[t] && isSchoolDay(t)){
     var e = nc[t];
     html += '<div class="eyebrow" style="color:var(--muted)">No classes</div>';
@@ -967,11 +987,11 @@ function renderToday(){
   /* suspension button */
   btn.disabled=false; btn.style.opacity=1;
   if(nc[t] && isSchoolDay(t)){
-    btn.textContent = "✓ Undo — classes are on today";
+    btn.textContent = (nc[t].reason==="Day 0") ? "✓ Undo Day 0 — today is a normal cycle day" : "✓ Undo — classes are on today";
     btn.classList.add("undo");
     btn.onclick = function(){ removeNonClass(t); renderToday(); };
   } else if(isSchoolDay(t) && !brk){
-    btn.textContent = "✕ No classes today";
+    btn.textContent = "✕ No classes / Day 0 today";
     btn.classList.remove("undo");
     btn.onclick = function(){ openReasonPicker(t, true); };
   } else {
@@ -1077,8 +1097,8 @@ function renderToday(){
 
 /* ---------------- reason picker sheet (with optional range) ---------------- */
 function openReasonPicker(dateStr, isToday){
-  var html = '<h2>'+(isToday?"No classes today":"Mark "+human(dateStr,true))+'</h2>'+
-    '<div class="sheet-sub">'+human(dateStr,true)+' won\u2019t consume a cycle day — the day shifts forward.</div>'+
+  var html = '<h2>'+(isToday?"Today won\u2019t advance the cycle":"Mark "+human(dateStr,true))+'</h2>'+
+    '<div class="sheet-sub">'+human(dateStr,true)+' won\u2019t consume a cycle day — whatever day number it held shifts to the next school day. Pick <b>Day 0</b> if he still has school but the cycle is paused; pick any other reason if there are no classes at all.</div>'+
     '<div class="field"><label for="rpThrough">Also mark school days through (optional — for multi-day breaks/holidays)</label><input type="date" id="rpThrough" min="'+dateStr+'"></div>'+
     '<div class="reason-grid">'+
     REASONS.map(function(r){
@@ -1244,6 +1264,11 @@ function renderCal(){
     else if(e && !inDomain(s)){
       cls+=" brk"; inner+='<span class="bmark">brk</span>'; aria+=", term break";
     }
+    else if(e && e.reason==="Day 0"){
+      cls+=" dayzero";
+      inner += '<span class="cchip d0">D0</span>';
+      aria+=", Day 0 — cycle does not advance";
+    }
     else if(e){
       cls+=" noclass";
       inner += '<span class="remoji" title="'+e.reason+'">'+RMETA[e.reason].emoji+'</span>';
@@ -1295,6 +1320,7 @@ function openDaySheet(s){
   var brk = isBreakDay(s, nc);
   var status;
   if(ci) status = 'Cycle '+ci.cycle+' · Day '+ci.day+(isPEDay(ci.day)?' · 🏃 PE day':'');
+  else if(e && e.reason==="Day 0") status = '0️⃣ Day 0 — classes, but the cycle does not advance'+(e.note?' ('+esc(e.note)+')':'');
   else if(e) status = RMETA[e.reason].emoji+' No classes — '+e.reason+(e.note?' ('+esc(e.note)+')':'');
   else if(brk) status = '🏖️ Term break — no cycle day';
   else status = '';
@@ -1338,12 +1364,12 @@ function openDaySheet(s){
       '</div></div>'+
       '<div class="field"><label for="dsNcNote">No-class note (optional)</label><input id="dsNcNote" type="text" value="'+esc(e.note||"")+'" placeholder="e.g. Typhoon signal #3"></div>'+
       '<button class="pri-btn" id="dsNcSave">Save no-class changes</button>'+
-      '<button class="sec-btn warn-btn" id="dsNcDel">Remove — classes happened this day</button>';
+      '<button class="sec-btn warn-btn" id="dsNcDel">Remove — this was a normal cycle day</button>';
   } else if(brk){
     var g = governingTerm(s);
     html += '<div class="hint">This weekday falls in a term break'+(g&&g.end?' — '+(g.name||'the previous term')+' ended '+human(g.end,true):'')+'. It carries no cycle day and needs no logging. Term dates are editable in Settings.</div>';
   } else {
-    html += '<button class="sec-btn warn-btn" id="dsNcMark" style="margin-top:0">✕ No classes this day…</button>';
+    html += '<button class="sec-btn warn-btn" id="dsNcMark" style="margin-top:0">✕ No classes / Day 0 this day…</button>';
   }
   html += '<button class="cancel">Close</button>';
   openSheet(html);
@@ -1420,7 +1446,7 @@ function refreshBehindSheet(){
 function renderLog(){
   var list = document.getElementById("logList");
   if(!state.nonClassDays.length){
-    list.innerHTML = '<div class="empty-note">No holidays or suspensions recorded yet.<br>Use the big button on the Today tab, or tap a date in the calendar.</div>';
+    list.innerHTML = '<div class="empty-note">No holidays, suspensions, or Day 0s recorded yet.<br>Use the big button on the Today tab, or tap a date in the calendar.</div>';
     return;
   }
   var t = todayStr();
