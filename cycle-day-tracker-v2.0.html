@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B2A4A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Cycle Day Tracker</title>
+<style>
+:root{
+  --ink:#1B2A4A;
+  --blue:#1E4FA3;
+  --blue-soft:#E7EEFB;
+  --paper:#F2F4F8;
+  --card:#FFFFFF;
+  --line:#E3E7EF;
+  --muted:#7B8499;
+  --pe:#E8611A;
+  --pe-soft:#FDE9DC;
+  --grey-day:#EDEFF3;
+  --danger:#B93A32;
+  --ok:#1E7F4F;
+  --r-weather:#3A7CA5;
+  --r-holiday:#8E44AD;
+  --r-event:#1E7F4F;
+  --r-other:#7B8499;
+  --r-break:#5B7083;
+  --r-dayzero:#4A4EA8;
+  --ev-hw:#3E8E5A;
+  --ev-quiz:#E19B00;
+  --ev-test:#7B5CD6;
+  --ev-oral:#159E9E;
+  --ev-exam:#C0392B;
+  --radius:16px;
+  --shadow:0 1px 3px rgba(27,42,74,.08), 0 4px 14px rgba(27,42,74,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--paper);color:var(--ink);
+  min-height:100vh;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:1rem;color:var(--ink)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- header ---------- */
+header{
+  background:var(--ink);color:#fff;
+  padding:calc(14px + env(safe-area-inset-top)) 18px 14px;
+  display:flex;align-items:baseline;justify-content:space-between;
+}
+header h1{font-size:1.05rem;font-weight:700;letter-spacing:.04em}
+header .sub{font-size:.72rem;color:#AEB9D2;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+
+.wrap{max-width:480px;margin:0 auto;padding:16px 14px 24px}
+.view{display:none}
+.view.active{display:block}
+
+/* ---------- today card ---------- */
+.today-card{
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:20px 18px 18px;text-align:center;position:relative;
+}
+.today-card .date-line{font-size:.95rem;font-weight:600;color:var(--muted)}
+.today-card .eyebrow{
+  margin-top:14px;font-size:.78rem;font-weight:700;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--blue);
+}
+.today-card .big-day{
+  font-size:6.4rem;line-height:1;font-weight:800;
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;color:var(--ink);
+}
+.today-card .big-day.pe-day{color:var(--pe)}
+.today-card .big-word{font-size:1.6rem;font-weight:800;letter-spacing:-.01em}
+.today-card .cycle-line{margin-top:2px;font-size:1rem;font-weight:600;color:var(--muted)}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  margin-top:12px;padding:8px 16px;border-radius:999px;
+  font-size:.92rem;font-weight:700;
+}
+.badge.pe{background:var(--pe);color:#fff}
+.badge.pe-tmrw{background:var(--pe-soft);color:var(--pe)}
+.badge.off{background:var(--grey-day);color:var(--muted)}
+.today-evs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}
+.ev-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 12px;border-radius:999px;color:#fff;
+  font-size:.82rem;font-weight:800;
+}
+.dots{display:flex;justify-content:center;gap:9px;margin-top:18px}
+.dot{
+  width:13px;height:13px;border-radius:50%;background:var(--line);
+  position:relative;
+}
+.dot.pe-slot{border-radius:3px}
+.dot.done{background:#B9C4DA}
+.dot.done.pe-slot{background:#EFC3A9}
+.dot.current{background:var(--blue);transform:scale(1.35)}
+.dot.current.pe-slot{background:var(--pe)}
+.dots-caption{margin-top:8px;font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tap-hint{margin-top:14px;font-size:.75rem;color:var(--muted)}
+
+/* ---------- big suspension button ---------- */
+.suspend-btn{
+  display:block;width:100%;margin-top:14px;padding:18px;
+  background:var(--card);border:2px solid var(--danger);color:var(--danger);
+  border-radius:var(--radius);font-size:1.1rem;font-weight:800;
+  box-shadow:var(--shadow);
+}
+.suspend-btn:active{background:#FBEBEA}
+.suspend-btn.undo{border-color:var(--ok);color:var(--ok)}
+
+/* ---------- upcoming ---------- */
+.section-title{margin:22px 4px 10px;font-size:.78rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.up-list{display:flex;flex-direction:column;gap:8px}
+.up-item{
+  background:var(--card);border-radius:12px;box-shadow:var(--shadow);
+  padding:12px 14px;display:flex;align-items:center;gap:12px;
+}
+.up-item .up-daychip{
+  min-width:52px;text-align:center;padding:8px 4px;border-radius:10px;
+  background:var(--blue-soft);color:var(--blue);font-weight:800;font-size:1rem;
+}
+.up-item.pe .up-daychip{background:var(--pe);color:#fff}
+.up-item .up-date{font-weight:600;flex:1}
+.up-item .up-note{font-size:.85rem;color:var(--pe);font-weight:700}
+.mini-dots{display:inline-flex;gap:3px;margin-left:6px;vertical-align:middle}
+.mini-dots i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.evu-item{
+  background:var(--card);border-radius:12px;box-shadow:var(--shadow);
+  padding:12px 14px;display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+}
+.evu-item .evu-tag{
+  min-width:0;padding:6px 12px;border-radius:999px;color:#fff;
+  font-size:.8rem;font-weight:800;white-space:nowrap;
+}
+.evu-item .evu-body{flex:1;min-width:0}
+.evu-item .evu-date{font-weight:700;font-size:.92rem}
+.evu-item .evu-note{font-size:.85rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- calendar ---------- */
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-head .month-label{font-size:1.15rem;font-weight:800}
+.cal-nav{display:flex;gap:8px}
+.cal-nav button{
+  width:44px;height:44px;border-radius:12px;background:var(--card);
+  box-shadow:var(--shadow);font-size:1.2rem;font-weight:700;color:var(--blue);
+}
+.cal-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:4px;
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 8px 12px;
+}
+.cal-dow{text-align:center;font-size:.68rem;font-weight:800;color:var(--muted);letter-spacing:.05em;padding:4px 0}
+.cal-dow.wk{color:#C2C8D4}
+.cal-cell{
+  min-height:64px;border-radius:10px;padding:4px 2px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:transparent;font-size:.85rem;position:relative;width:100%;
+}
+.cal-cell:disabled{opacity:0}
+.cal-cell .dnum{font-weight:700;font-size:.82rem}
+.cal-cell.weekend{color:#C2C8D4}
+.cal-cell.brk .dnum{color:#C2C8D4}
+.cal-cell.brk .bmark{font-size:.6rem;font-weight:800;color:#C2C8D4;letter-spacing:.05em}
+.cal-cell.today-cell{outline:2.5px solid var(--blue);outline-offset:-2.5px}
+.cal-cell .cchip{
+  font-size:.72rem;font-weight:800;padding:3px 7px;border-radius:7px;
+  background:var(--blue-soft);color:var(--blue);
+}
+.cal-cell .cchip.pe{background:var(--pe);color:#fff}
+.cal-cell .cchip.d0{background:var(--r-dayzero);color:#fff}
+.cal-cell.dayzero{background:#EDEEF9}
+.cal-cell.noclass{background:var(--grey-day)}
+.cal-cell.noclass .dnum{color:var(--muted);text-decoration:line-through}
+.cal-cell .remoji{font-size:.85rem;line-height:1}
+.cal-cell .cyc-mark{
+  position:absolute;top:2px;right:3px;font-size:.55rem;font-weight:800;color:#B4BCCB;
+}
+.cal-cell .edots{display:flex;gap:2px;justify-content:center;min-height:6px}
+.cal-cell .edots i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.cal-cell .edots .more{font-size:.55rem;font-weight:800;color:var(--muted);line-height:6px}
+.cal-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:12px;padding:0 4px;font-size:.75rem;color:var(--muted);font-weight:600}
+.cal-legend span{display:inline-flex;align-items:center;gap:5px}
+.lg{width:13px;height:13px;border-radius:5px;display:inline-block}
+.lg.blue{background:var(--blue-soft);border:1.5px solid var(--blue)}
+.lg.orange{background:var(--pe)}
+.lg.grey{background:var(--grey-day)}
+.lg.round{border-radius:50%;width:9px;height:9px}
+
+/* ---------- log ---------- */
+.log-list{display:flex;flex-direction:column;gap:8px}
+.log-item{
+  background:var(--card);border-radius:12px;box-shadow:var(--shadow);
+  padding:12px 14px;display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+}
+.log-item .lg-date{font-weight:800;min-width:86px;font-size:.92rem}
+.log-item .lg-body{flex:1}
+.log-item .lg-reason{font-size:.8rem;font-weight:800;padding:2px 8px;border-radius:999px;color:#fff;display:inline-block}
+.log-item .lg-note{font-size:.85rem;color:var(--muted);margin-top:3px}
+.log-item .lg-arrow{color:var(--muted);font-size:1.1rem}
+.rz-weather{background:var(--r-weather)}
+.rz-holiday{background:var(--r-holiday)}
+.rz-event{background:var(--r-event)}
+.rz-other{background:var(--r-other)}
+.rz-break{background:var(--r-break)}
+.rz-dayzero{background:var(--r-dayzero)}
+.empty-note{
+  background:var(--card);border-radius:12px;box-shadow:var(--shadow);
+  padding:22px 16px;text-align:center;color:var(--muted);font-size:.92rem;
+}
+
+/* ---------- settings ---------- */
+.set-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.set-card h3{font-size:.95rem;font-weight:800;margin-bottom:10px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.set-row label{font-weight:600;font-size:.92rem}
+.set-row input[type=number],.set-row input[type=date],.set-row input[type=text]{
+  border:1.5px solid var(--line);border-radius:10px;padding:10px;width:120px;font-size:1rem;
+}
+.set-row input[type=date]{width:160px}
+.set-row input[type=text]{width:160px}
+.term-box{border:1.5px solid var(--line);border-radius:12px;padding:12px 12px 4px;margin-bottom:10px;position:relative}
+.term-box .t-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.term-box .t-head input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-weight:700}
+.dow-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.dow-grid label{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  font-size:.7rem;font-weight:700;color:var(--muted);
+  padding:8px 0;border:1.5px solid var(--line);border-radius:10px;
+}
+.dow-grid label.on{border-color:var(--blue);background:var(--blue-soft);color:var(--blue)}
+.dow-grid input{width:18px;height:18px;accent-color:var(--blue)}
+.subj-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.subj-row input{border:1.5px solid var(--line);border-radius:10px;padding:10px}
+.subj-row .s-name{flex:1;min-width:0}
+.subj-row .s-days{width:90px}
+.icon-btn{width:44px;height:44px;border-radius:10px;background:var(--grey-day);font-size:1.05rem;font-weight:800;color:var(--danger);flex:none}
+.pri-btn{
+  display:block;width:100%;padding:14px;border-radius:12px;
+  background:var(--blue);color:#fff;font-weight:800;font-size:1rem;margin-top:6px;
+}
+.sec-btn{
+  display:block;width:100%;padding:14px;border-radius:12px;
+  background:var(--grey-day);color:var(--ink);font-weight:800;font-size:1rem;margin-top:8px;
+}
+.warn-btn{background:#FBEBEA;color:var(--danger)}
+textarea.io{
+  width:100%;min-height:130px;border:1.5px solid var(--line);border-radius:10px;
+  padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;margin-top:8px;
+}
+.hint{font-size:.8rem;color:var(--muted);margin-top:6px;line-height:1.45}
+.msg{font-size:.85rem;font-weight:700;margin-top:8px;min-height:1.2em}
+.msg.ok{color:var(--ok)} .msg.err{color:var(--danger)}
+.anchor-warn{
+  background:#FBEBEA;color:var(--danger);border-radius:12px;padding:12px 14px;
+  font-size:.88rem;font-weight:600;margin-bottom:12px;
+}
+
+/* ---------- class schedule rows ---------- */
+.sched-list{background:var(--card);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.sched-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.sched-row:last-child{border-bottom:none}
+.sched-row .sc-time{min-width:88px;font-size:.78rem;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.sched-row .sc-subj{flex:1;font-weight:700;font-size:.92rem}
+.sched-row.pe{background:var(--pe-soft)}
+.sched-row.pe .sc-subj{color:var(--pe)}
+.sched-row.mute .sc-subj{color:var(--muted);font-weight:600}
+.sched-mini{margin:0 0 12px;border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+.sched-mini .sched-row{padding:8px 10px}
+.day-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.day-pills button{
+  min-width:44px;padding:10px 0;border-radius:10px;background:var(--grey-day);
+  font-weight:800;font-size:.9rem;color:var(--muted);flex:1;
+}
+.day-pills button.sel{background:var(--blue);color:#fff}
+
+/* ---------- bottom nav ---------- */
+nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:50;
+  background:var(--card);border-top:1px solid var(--line);
+  display:flex;justify-content:space-around;
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+nav button{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:8px 4px;font-size:.68rem;font-weight:700;color:var(--muted);border-radius:12px;
+}
+nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+nav button.active{color:var(--blue)}
+
+/* ---------- sheets / modals ---------- */
+.overlay{
+  position:fixed;inset:0;background:rgba(27,42,74,.45);z-index:100;
+  display:none;align-items:flex-end;justify-content:center;
+}
+.overlay.open{display:flex}
+.sheet{
+  background:var(--card);width:100%;max-width:480px;
+  border-radius:20px 20px 0 0;padding:20px 18px calc(22px + env(safe-area-inset-bottom));
+  animation:up .18s ease-out;max-height:85vh;overflow-y:auto;
+}
+@keyframes up{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
+.sheet h2{font-size:1.1rem;font-weight:800;margin-bottom:4px}
+.sheet .sheet-sub{font-size:.88rem;color:var(--muted);margin-bottom:14px}
+.reason-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.reason-grid button{
+  padding:16px 10px;border-radius:14px;font-weight:800;font-size:.92rem;color:#fff;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.reason-grid button:last-child:nth-child(odd){grid-column:1 / -1}
+.reason-grid .rb-emoji{font-size:1.5rem}
+.sheet .cancel{margin-top:12px;width:100%;padding:14px;border-radius:12px;background:var(--grey-day);font-weight:800}
+.sheet .field{margin-bottom:12px}
+.sheet .field label{display:block;font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:5px}
+.sheet .field input{
+  width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;font-size:1.05rem;
+}
+.sheet .two{display:flex;gap:10px}
+.sheet .two .field{flex:1}
+.reason-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.reason-pills button{
+  padding:10px 14px;border-radius:999px;font-weight:800;font-size:.85rem;
+  background:var(--grey-day);color:var(--muted);
+}
+.reason-pills button.sel{color:#fff}
+.sheet .divider{border:none;border-top:1.5px solid var(--line);margin:16px 0}
+.ev-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.ev-row{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:10px;padding:8px 10px}
+.ev-row .ev-chip{margin:0;flex:none}
+.ev-row .ev-note-in{flex:1;min-width:0;font-size:.9rem;color:var(--ink);border:1.5px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff}
+.ev-row .ev-note-in::placeholder{color:var(--muted)}
+.ev-row .ev-del{width:38px;height:38px;border-radius:8px;background:var(--grey-day);color:var(--danger);font-weight:800;flex:none}
+.ev-saved{font-size:.72rem;font-weight:700;color:var(--ok);margin:2px 0 8px 2px;min-height:.9em}
+.ev-done-btn{width:38px;height:38px;border-radius:8px;background:var(--grey-day);color:var(--muted);font-size:1.1rem;font-weight:800;flex:none;border:1.5px solid var(--line)}
+.ev-done-btn.on{background:var(--ok);color:#fff;border-color:var(--ok)}
+.ev-row.done .ev-chip{opacity:.55}
+.ev-row.done .ev-note-in{text-decoration:line-through;color:var(--muted)}
+.ev-chip.done{opacity:.5;text-decoration:line-through}
+.evu-item.done .evu-tag{opacity:.5}
+.evu-item.done .evu-date,.evu-item.done .evu-note{text-decoration:line-through;color:var(--muted)}
+.evu-check{width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;background:var(--grey-day);color:var(--muted);border:1.5px solid var(--line)}
+.evu-check.on{background:var(--ok);color:#fff;border-color:var(--ok)}
+.mini-dots i.done,.edots i.done{opacity:.35}
+.edots i.done{box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.ev-add-pills{display:flex;flex-wrap:wrap;gap:8px}
+.ev-add-pills button{
+  padding:10px 13px;border-radius:999px;color:#fff;font-weight:800;font-size:.83rem;
+  display:inline-flex;align-items:center;gap:5px;
+}
+footer{
+  text-align:center;color:var(--muted);font-size:.72rem;font-weight:600;
+  padding:18px 0 6px;letter-spacing:.03em;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Cycle Day Tracker</h1>
+    <div class="sub">Xavier School · Kinder G</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ TODAY ============ -->
+  <section class="view active" id="view-today">
+    <div id="anchorWarn"></div>
+    <button class="today-card" id="todayCard" style="width:100%" aria-label="Today's cycle day. Tap to re-anchor or start a new term."></button>
+    <button class="suspend-btn" id="suspendBtn"></button>
+    <div id="schedWrap" style="display:none">
+      <div class="section-title" id="schedTitle">Today's classes</div>
+      <div class="sched-list" id="schedList"></div>
+    </div>
+    <div id="evUpWrap" style="display:none">
+      <div class="section-title">Upcoming events</div>
+      <div class="up-list" id="evUpList"></div>
+    </div>
+    <div class="section-title">Next PE days</div>
+    <div class="up-list" id="peList"></div>
+    <div class="section-title">Coming up</div>
+    <div class="up-list" id="upList"></div>
+  </section>
+
+  <!-- ============ CALENDAR ============ -->
+  <section class="view" id="view-cal">
+    <div class="cal-head">
+      <div class="month-label" id="calLabel"></div>
+      <div class="cal-nav">
+        <button id="calPrev" aria-label="Previous month">‹</button>
+        <button id="calToday" aria-label="Jump to current month" style="width:auto;padding:0 12px;font-size:.85rem">Today</button>
+        <button id="calNext" aria-label="Next month">›</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">
+      <span><span class="lg blue"></span>Cycle day</span>
+      <span><span class="lg orange"></span>PE</span>
+      <span><span class="lg grey"></span>No classes</span>
+      <span><span class="lg" style="background:var(--r-dayzero)"></span>Day 0</span>
+    </div>
+    <div class="cal-legend" id="evLegend"></div>
+    <p class="hint" style="padding:0 4px">Tap any weekday to add homework, quizzes, tests, recitations, or exams — events follow the cycle day and shift automatically when classes are cancelled. Tap a day to mark it no-class too. Weekdays between terms show as “brk”.</p>
+  </section>
+
+  <!-- ============ LOG ============ -->
+  <section class="view" id="view-log">
+    <div class="section-title" style="margin-top:4px">No-class &amp; Day 0 records</div>
+    <div class="log-list" id="logList"></div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="view" id="view-set">
+
+    <div class="set-card">
+      <h3>Cycle</h3>
+      <div class="set-row">
+        <label for="setLen">Days per cycle</label>
+        <input type="number" id="setLen" min="1" max="30" inputmode="numeric">
+      </div>
+    </div>
+
+    <div class="set-card">
+      <h3>Terms & anchors</h3>
+      <p class="hint" style="margin:0 0 10px">Each term has its own anchor (a known date = known cycle day) and a last day of classes. Weekdays after a term’s last day and before the next term’s anchor are term break — no cycle day, nothing to log. Every term except the current one needs an end date. The usual way to start a new term is tapping the Today card on its first day.</p>
+      <div id="termList"></div>
+      <button class="sec-btn" id="addTerm">+ Add term</button>
+    </div>
+
+    <div class="set-card">
+      <h3>Class schedule per cycle day</h3>
+      <p class="hint" style="margin:0 0 10px">One class per line, as “time | subject” (e.g. “7:30–8:00 | CLE”). Lines without a “|” are shown without a time. Switching days keeps your edits.</p>
+      <div class="day-pills" id="schedPills"></div>
+      <textarea class="io" id="schedText" style="margin-top:0;min-height:170px" aria-label="Schedule for the selected day"></textarea>
+    </div>
+
+    <div class="set-card">
+      <h3>School days</h3>
+      <div class="dow-grid" id="dowGrid"></div>
+    </div>
+
+    <div class="set-card">
+      <h3>Subjects & their cycle days</h3>
+      <p class="hint" style="margin:0 0 10px">Day numbers separated by commas, e.g. “4,7”. The first subject gets the orange highlight.</p>
+      <div id="subjList"></div>
+      <button class="sec-btn" id="addSubj">+ Add subject</button>
+    </div>
+
+    <div class="set-card">
+      <button class="pri-btn" id="saveSettings">Save settings</button>
+      <div class="msg" id="setMsg"></div>
+    </div>
+
+    <div class="set-card">
+      <h3>Family sync <span style="font-weight:600;color:var(--muted)">(share with another phone)</span></h3>
+      <p class="hint" style="margin:0 0 10px">Both phones enter the same database URL and family code; every change then appears on the other phone within seconds. Needs a free Firebase Realtime Database — one-time setup, steps provided with this version.</p>
+      <div class="set-row" style="flex-direction:column;align-items:stretch;gap:5px"><label for="syncUrlIn">Database URL</label><input type="text" id="syncUrlIn" placeholder="https://…firebasedatabase.app" style="width:100%" autocapitalize="off" autocorrect="off"></div>
+      <div class="set-row" style="flex-direction:column;align-items:stretch;gap:5px"><label for="syncCodeIn">Family code (same on both phones)</label><input type="text" id="syncCodeIn" placeholder="tap Generate, or paste the shared code" style="width:100%" autocapitalize="off" autocorrect="off"></div>
+      <button class="sec-btn" id="syncGen">Generate a new family code</button>
+      <button class="pri-btn" id="syncConnect">Save &amp; connect</button>
+      <button class="sec-btn warn-btn" id="syncOff" style="display:none">Turn sync off</button>
+      <div class="msg" id="syncStatus"></div>
+      <p class="hint">Sync copies the log to your Firebase database, so it leaves this phone. Anyone holding both the URL and the code could read it — keep the code private (it’s long and random on purpose). If two edits collide, the most recent one wins.</p>
+    </div>
+
+    <div class="set-card">
+      <h3>Backup</h3>
+      <button class="sec-btn" id="exportBtn" style="margin-top:0">Export data</button>
+      <textarea class="io" id="exportBox" readonly style="display:none" aria-label="Exported data"></textarea>
+      <button class="sec-btn" id="copyBtn" style="display:none">Copy to clipboard</button>
+      <button class="sec-btn" id="importToggle">Import data</button>
+      <textarea class="io" id="importBox" style="display:none" placeholder="Paste exported JSON here…" aria-label="Paste data to import"></textarea>
+      <button class="sec-btn warn-btn" id="importBtn" style="display:none">Replace all data with pasted backup</button>
+      <div class="msg" id="ioMsg"></div>
+      <p class="hint">Data lives only in this browser (localStorage). Backups from any older version import fine — they’re upgraded automatically. Export a copy now and then in case the browser clears it.</p>
+    </div>
+
+    <footer>Cycle Day Tracker v2.0 · SY 2026–27 · data stays on this device</footer>
+  </section>
+</div>
+
+<!-- ============ NAV ============ -->
+<nav>
+  <button data-view="today" class="active" aria-label="Today">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Today</button>
+  <button data-view="cal" aria-label="Calendar">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendar</button>
+  <button data-view="log" aria-label="Log">
+    <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Log</button>
+  <button data-view="set" aria-label="Settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.5 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.5-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>Settings</button>
+</nav>
+
+<!-- ============ SHEETS ============ -->
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var KEY = "cycleTracker.v1";   /* same key since v1.0 — schema migrated in place */
+var VERSION_LABEL = "v2.0";
+
+/* ---------------- no-class reasons ---------------- */
+var REASONS = ["Weather suspension","Holiday","School event","Term break","Day 0","Other"];
+var RMETA = {
+  "Weather suspension":{emoji:"🌧️", cls:"rz-weather", bg:"#3A7CA5"},
+  "Holiday":{emoji:"🎉", cls:"rz-holiday", bg:"#8E44AD"},
+  "School event":{emoji:"🏫", cls:"rz-event", bg:"#1E7F4F"},
+  "Term break":{emoji:"🏖️", cls:"rz-break", bg:"#5B7083"},
+  "Day 0":{emoji:"0️⃣", cls:"rz-dayzero", bg:"#4A4EA8"},
+  "Other":{emoji:"📌", cls:"rz-other", bg:"#7B8499"}
+};
+
+/* ---------------- event types (color-coded academic tags) ---------------- */
+var EVENT_TYPES = ["Homework","Graded Seatwork","Quiz","Test","Oral Recitation","Exam"];
+var EMETA = {
+  "Homework":{emoji:"📝", bg:"#3E8E5A"},
+  "Graded Seatwork":{emoji:"📄", bg:"#C0398C"},
+  "Quiz":{emoji:"✏️", bg:"#E19B00"},
+  "Test":{emoji:"📋", bg:"#7B5CD6"},
+  "Oral Recitation":{emoji:"🗣️", bg:"#159E9E"},
+  "Exam":{emoji:"🎓", bg:"#C0392B"}
+};
+
+/* ---------------- default class schedule (from the school's KG timetable) ---------------- */
+var DEFAULT_TIMETABLE = {
+  "1":[{t:"",s:"Preparation Routine"},{t:"7:30–8:00",s:"CLE"},{t:"8:00–8:30",s:"General Assembly"},{t:"8:30–9:00",s:"Filipino"},{t:"9:00–9:30",s:"Health Break"},{t:"9:30–10:00",s:"Chinese"},{t:"10:00–10:30",s:"Mathematics"},{t:"10:30–11:00",s:"English & Multi-Disciplinary"}],
+  "2":[{t:"",s:"Preparation Routine"},{t:"7:30–8:00",s:"Chinese"},{t:"8:00–8:30",s:"English & Multi-Disciplinary"},{t:"8:30–9:00",s:"English & Multi-Disciplinary"},{t:"9:00–9:30",s:"Health Break"},{t:"9:30–10:00",s:"Mathematics"},{t:"10:00–10:30",s:"LRC"},{t:"10:30–11:00",s:"Filipino"}],
+  "3":[{t:"",s:"Preparation Routine"},{t:"7:30–8:00",s:"CLE"},{t:"8:00–8:30",s:"Mathematics"},{t:"8:30–9:00",s:"CareSO"},{t:"9:00–9:30",s:"Health Break"},{t:"9:30–10:00",s:"Chinese"},{t:"10:00–10:30",s:"English & Multi-Disciplinary"},{t:"10:30–11:00",s:"Filipino"}],
+  "4":[{t:"",s:"Preparation Routine"},{t:"7:30–8:00",s:"Filipino"},{t:"8:00–8:30",s:"PE"},{t:"8:30–9:00",s:"English & Multi-Disciplinary"},{t:"9:00–9:30",s:"Health Break"},{t:"9:30–10:00",s:"Chinese"},{t:"10:00–10:30",s:"Mathematics"},{t:"10:30–11:00",s:"Penmanship"}],
+  "5":[{t:"",s:"Preparation Routine"},{t:"7:30–8:00",s:"Mathematics"},{t:"8:00–8:30",s:"Filipino"},{t:"8:30–9:00",s:"English & Multi-Disciplinary"},{t:"9:00–9:30",s:"Health Break"},{t:"9:30–10:00",s:"Chinese"},{t:"10:00–10:30",s:"Circle Time"},{t:"10:30–11:00",s:"Circle Time"}],
+  "6":[{t:"",s:"Preparation Routine"},{t:"7:30–8:00",s:"Chinese"},{t:"8:00–8:30",s:"CLE"},{t:"8:30–9:00",s:"Filipino"},{t:"9:00–9:30",s:"Health Break"},{t:"9:30–10:00",s:"English & Multi-Disciplinary"},{t:"10:00–10:30",s:"Art / Music"},{t:"10:30–11:00",s:"Mathematics"}],
+  "7":[{t:"",s:"Preparation Routine"},{t:"7:30–8:00",s:"English & Multi-Disciplinary"},{t:"8:00–8:30",s:"PE"},{t:"8:30–9:00",s:"Mathematics"},{t:"9:00–9:30",s:"Health Break"},{t:"9:30–10:00",s:"Chinese"},{t:"10:00–10:30",s:"Filipino"}]
+};
+
+/* ---------------- default / seed state (schema v5) ---------------- */
+function seedState(){
+  return {
+    version:5,
+    timetable: JSON.parse(JSON.stringify(DEFAULT_TIMETABLE)),
+    terms:[{id:"t1", name:"Term 1", anchor:{date:"2026-07-07", cycle:2, day:3}, end:null}],
+    cycleLength:7,
+    schoolDays:[1,2,3,4,5],            /* JS getDay(): 0=Sun … 6=Sat */
+    subjects:[{name:"PE", days:[4,7]}],
+    events:[],
+    nonClassDays:[
+      {date:"2026-08-21", reason:"Holiday", note:"Ninoy Aquino Day"},
+      {date:"2026-08-31", reason:"Holiday", note:"National Heroes Day"},
+      {date:"2026-11-02", reason:"Holiday", note:"All Souls' Day (special non-working)"},
+      {date:"2026-11-30", reason:"Holiday", note:"Bonifacio Day"},
+      {date:"2026-12-08", reason:"Holiday", note:"Immaculate Conception"},
+      {date:"2026-12-24", reason:"Holiday", note:"Christmas Eve (special non-working)"},
+      {date:"2026-12-25", reason:"Holiday", note:"Christmas Day"},
+      {date:"2026-12-30", reason:"Holiday", note:"Rizal Day"},
+      {date:"2026-12-31", reason:"Holiday", note:"Last Day of the Year"}
+    ]
+  };
+}
+/* migrations: v1 (anchor) -> v2 (terms) -> v3 (events) -> v4 (cycle-anchored events + term ids) */
+function gid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function migrate(s){
+  if(!s || typeof s!=="object") return null;
+  if(s.anchor && s.anchor.date && !Array.isArray(s.terms)){
+    s.terms = [{name:"Term 1", anchor:s.anchor, end:s.yearEnd||null}];
+    delete s.anchor; delete s.yearEnd;
+  }
+  if(!Array.isArray(s.terms) || !s.terms.length) return null;
+  if(!Array.isArray(s.events)) s.events = [];
+  s.terms.forEach(function(T){ if(!T.id) T.id = "t"+gid(); });
+  if(!s.timetable || typeof s.timetable!=="object") s.timetable = JSON.parse(JSON.stringify(DEFAULT_TIMETABLE));
+  s.version = 5;
+  return s;
+}
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(!raw) return null;
+    return migrate(JSON.parse(raw));
+  }catch(e){ return null; }
+}
+function save(){
+  state.terms.sort(function(a,b){ return a.anchor.date<b.anchor.date?-1:1; });
+  localStorage.setItem(KEY, JSON.stringify(state));
+  queuePush();
+}
+var state = load();
+if(!state){ state = seedState(); save(); }
+
+/* ---------------- date utils (local YYYY-MM-DD strings only) ---------------- */
+function pad(n){ return (n<10?"0":"")+n; }
+function fmt(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function parseD(s){ var p=s.split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+function addDays(s,n){ var d=parseD(s); d.setDate(d.getDate()+n); return fmt(d); }
+function dow(s){ return parseD(s).getDay(); }
+function todayStr(){
+  try{
+    return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Manila",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  }catch(e){ return fmt(new Date()); }
+}
+var MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+var DOWS_SHORT=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function human(s, withYear){
+  var d=parseD(s);
+  return DOWS_SHORT[d.getDay()]+", "+MONTHS[d.getMonth()].slice(0,3)+" "+d.getDate()+(withYear?", "+d.getFullYear():"");
+}
+function esc(x){ return String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+
+/* ---------------- non-class lookup ---------------- */
+function ncMap(){
+  var m={};
+  state.nonClassDays.forEach(function(e){ m[e.date]=e; });
+  return m;
+}
+function isSchoolDay(s){ return state.schoolDays.indexOf(dow(s))!==-1; }
+
+/* ---------------- events (cycle-anchored: their dates shift with the cycle) ---------------- */
+function dateOfEvent(e, nc){
+  nc = nc || ncMap();
+  if(e.date) return e.date;                 /* date-pinned fallback (added on a no-cycle day) */
+  var T=null;
+  for(var i=0;i<state.terms.length;i++){ if(state.terms[i].id===e.termId){ T=state.terms[i]; break; } }
+  if(!T) return null;
+  var L=state.cycleLength;
+  var P=(e.cycle-1)*L+(e.day-1);
+  var P0=(T.anchor.cycle-1)*L+(T.anchor.day-1);
+  var d=T.anchor.date, cur=P0, g=0;
+  function inT(x){ var gt=governingTerm(x); return gt===T || (!gt && T===state.terms[0]); }
+  if(P===P0) return (isClassDay(d,nc)&&inT(d)) ? d : null;
+  if(P>P0){
+    while(g++<WALK_LIMIT){
+      d=addDays(d,1);
+      if(!inT(d)) return null;
+      if(isClassDay(d,nc)){ cur++; if(cur===P) return d; }
+    }
+    return null;
+  }
+  while(g++<WALK_LIMIT){
+    d=addDays(d,-1);
+    if(isClassDay(d,nc)&&inT(d)){ cur--; if(cur===P) return d; }
+  }
+  return null;
+}
+function evByDate(nc){
+  nc = nc || ncMap();
+  var m={};
+  state.events.forEach(function(e){
+    var d = dateOfEvent(e, nc);
+    if(d) (m[d]=m[d]||[]).push(e);
+  });
+  return m;
+}
+function addEvent(dateStr, type, note){
+  var e = {id:gid(), type:type, note:note||""};
+  var ci = cycleInfo(dateStr);
+  if(ci){ e.termId = termOf(dateStr).id; e.cycle = ci.cycle; e.day = ci.day; }
+  else { e.date = dateStr; }
+  state.events.push(e);
+  save();
+}
+function removeEvent(id){
+  state.events = state.events.filter(function(e){ return e.id!==id; });
+  save();
+}
+function setEventNote(id, note){
+  var hit=false;
+  state.events.forEach(function(e){ if(e.id===id){ e.note=note; hit=true; } });
+  if(hit) save();
+  return hit;
+}
+function toggleEventDone(id){
+  state.events.forEach(function(e){ if(e.id===id){ e.done=!e.done; } });
+  save();
+}
+function upgradeEvents(){
+  /* one-time: convert older date-pinned events to cycle positions where possible */
+  var changed=false, nc=ncMap();
+  state.events.forEach(function(e){
+    if(e.date && !e.termId){
+      var ci = cycleInfo(e.date, nc);
+      if(ci){ e.termId = termOf(e.date).id; e.cycle = ci.cycle; e.day = ci.day; delete e.date; changed=true; }
+    }
+  });
+  if(changed) save();
+}
+
+/* ---------------- terms ---------------- */
+function governingTerm(s){
+  var g=null;
+  for(var i=0;i<state.terms.length;i++){
+    if(state.terms[i].anchor.date<=s) g=state.terms[i];
+  }
+  return g;
+}
+function inDomain(s){
+  var g = governingTerm(s);
+  if(!g) return true;
+  return !(g.end && s>g.end);
+}
+function isDayZero(s, nc){
+  var e = (nc||ncMap())[s];
+  return !!(e && e.reason==="Day 0");
+}
+function isBreakDay(s, nc){
+  return isSchoolDay(s) && !(nc||ncMap())[s] && !inDomain(s);
+}
+function isClassDay(s, nc){
+  if(!isSchoolDay(s)) return false;
+  if(!inDomain(s)) return false;
+  return !(nc||ncMap())[s];
+}
+function termOf(s){ return governingTerm(s) || state.terms[0]; }
+
+/* ---------------- core cycle math ---------------- */
+var WALK_LIMIT = 3000;
+function posToCD(P, L){
+  return { cycle: Math.floor(P/L)+1, day: ((P%L)+L)%L+1 };
+}
+function cycleInfo(s, nc){
+  nc = nc || ncMap();
+  if(!isClassDay(s,nc)) return null;
+  var a = termOf(s).anchor, L = state.cycleLength;
+  var P0 = (a.cycle-1)*L + (a.day-1);
+  var c=0, d, i=0;
+  if(s === a.date) return posToCD(P0, L);
+  if(s > a.date){
+    d = a.date;
+    while(d < s && i++ < WALK_LIMIT){ d = addDays(d,1); if(isClassDay(d,nc)) c++; }
+    return posToCD(P0 + c, L);
+  }
+  d = s;
+  while(d < a.date && i++ < WALK_LIMIT){ if(isClassDay(d,nc)) c++; d = addDays(d,1); }
+  return posToCD(P0 - c, L);
+}
+function nextClassDay(fromExclusive, nc){
+  nc = nc || ncMap();
+  var d = fromExclusive, i=0;
+  while(i++ < WALK_LIMIT){
+    d = addDays(d,1);
+    if(isClassDay(d,nc)) return d;
+    var last = state.terms[state.terms.length-1];
+    if(last.end && d>last.end) return null;
+  }
+  return null;
+}
+function prevClassDay(fromExclusive, nc){
+  nc = nc || ncMap();
+  var d = fromExclusive, i=0;
+  while(i++ < WALK_LIMIT){
+    d = addDays(d,-1);
+    if(isClassDay(d,nc)) return d;
+  }
+  return null;
+}
+function subjectDaysSet(idx){
+  var s = state.subjects[idx];
+  return s ? s.days : [];
+}
+function subjectsOn(dayNum){
+  return state.subjects.filter(function(s){ return s.days.indexOf(dayNum)!==-1; })
+                       .map(function(s){ return s.name; });
+}
+function isPEDay(dayNum){ return subjectDaysSet(0).indexOf(dayNum)!==-1; }
+
+/* ---------------- family sync (Firebase Realtime Database via REST + SSE) ---------------- */
+var SYNC_KEY = "cycleTracker.sync";      /* stored separately so backups & state schema stay clean */
+var sync = null;
+try{ sync = JSON.parse(localStorage.getItem(SYNC_KEY)); }catch(e){ sync = null; }
+var es = null, lastStamp = 0, applyingRemote = false, pushTimer = null;
+function saveSyncCfg(){ localStorage.setItem(SYNC_KEY, JSON.stringify(sync)); }
+function syncActive(){ return !!(sync && sync.enabled && sync.url && sync.code); }
+function syncEndpoint(){ return sync.url.replace(/\/+$/,"")+"/families/"+encodeURIComponent(sync.code)+".json"; }
+function setSyncStatus(txt, ok){
+  var el = document.getElementById("syncStatus");
+  if(el){ el.textContent = txt; el.className = "msg "+(ok?"ok":"err"); }
+}
+function queuePush(){
+  if(!syncActive() || applyingRemote) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushState, 400);
+}
+function pushState(){
+  if(!syncActive()) return;
+  var stamp = Date.now(); lastStamp = stamp;
+  fetch(syncEndpoint(), {method:"PUT", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({updatedAt:stamp, device:sync.device, state:state})})
+    .then(function(r){
+      if(r.ok) setSyncStatus("Synced · "+new Date(stamp).toLocaleTimeString(), true);
+      else setSyncStatus("Sync error ("+r.status+") — check the database URL and its rules.", false);
+    })
+    .catch(function(){ setSyncStatus("Offline — will sync when back online.", false); });
+}
+function applyRemote(payload){
+  if(!payload || typeof payload!=="object" || !payload.state) return false;
+  if(payload.device === sync.device) return false;
+  if(!(payload.updatedAt > lastStamp)) return false;
+  var s = migrate(JSON.parse(JSON.stringify(payload.state)));
+  if(!s) return false;
+  lastStamp = payload.updatedAt;
+  applyingRemote = true;
+  state = s;
+  localStorage.setItem(KEY, JSON.stringify(state));
+  applyingRemote = false;
+  refreshAll();
+  if(document.getElementById("view-set").classList.contains("active")) renderSettings();
+  setSyncStatus("Updated from the other phone · "+new Date().toLocaleTimeString(), true);
+  return true;
+}
+function cloudPull(){
+  if(!syncActive()) return;
+  fetch(syncEndpoint()).then(function(r){ return r.json(); })
+    .then(function(p){ if(p) applyRemote(p); })
+    .catch(function(){});
+}
+function startStream(){
+  if(es){ es.close(); es = null; }
+  if(!syncActive() || !window.EventSource) return;
+  try{
+    es = new EventSource(syncEndpoint());
+    es.addEventListener("put", function(evt){
+      try{
+        var msg = JSON.parse(evt.data);
+        if(msg && msg.path === "/" && msg.data) applyRemote(msg.data);
+      }catch(e){}
+    });
+    /* EventSource reconnects automatically on errors */
+  }catch(e){}
+}
+function stopSync(){
+  if(es){ es.close(); es = null; }
+  if(sync){ sync.enabled = false; saveSyncCfg(); }
+}
+function initSync(){
+  if(syncActive()){ cloudPull(); startStream(); }
+}
+
+/* ---------------- navigation ---------------- */
+var views = ["today","cal","log","set"];
+function show(v){
+  views.forEach(function(x){
+    document.getElementById("view-"+x).classList.toggle("active", x===v);
+  });
+  document.querySelectorAll("nav button").forEach(function(b){
+    b.classList.toggle("active", b.dataset.view===v);
+  });
+  if(v==="today") renderToday();
+  if(v==="cal") renderCal();
+  if(v==="log") renderLog();
+  if(v==="set") renderSettings();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("nav button").forEach(function(b){
+  b.addEventListener("click", function(){ show(b.dataset.view); });
+});
+
+/* ---------------- sheet helpers ---------------- */
+var overlay = document.getElementById("overlay");
+var sheet = document.getElementById("sheet");
+function openSheet(html){ sheet.innerHTML = html; overlay.classList.add("open"); }
+function closeSheet(){ overlay.classList.remove("open"); sheet.innerHTML=""; }
+overlay.addEventListener("click", function(e){ if(e.target===overlay) closeSheet(); });
+
+/* ---------------- class schedule helpers ---------------- */
+function schedFor(dayNum){
+  var rows = state.timetable && state.timetable[String(dayNum)];
+  return Array.isArray(rows) ? rows : [];
+}
+function schedRowsHTML(dayNum){
+  var rows = schedFor(dayNum);
+  if(!rows.length) return "";
+  return rows.map(function(r){
+    var isPE = /\bPE\b/i.test(r.s);
+    var isMute = /health break|preparation routine|circle time|general assembly/i.test(r.s);
+    return '<div class="sched-row'+(isPE?' pe':(isMute?' mute':''))+'">'+
+      '<span class="sc-time">'+esc(r.t||"")+'</span>'+
+      '<span class="sc-subj">'+(isPE?'🏃 ':'')+esc(r.s)+'</span></div>';
+  }).join("");
+}
+
+/* ---------------- TODAY view ---------------- */
+function renderToday(){
+  var t = todayStr();
+  var nc = ncMap();
+  var ev = evByDate(nc);
+  var card = document.getElementById("todayCard");
+  var btn = document.getElementById("suspendBtn");
+  var warn = document.getElementById("anchorWarn");
+  var multiTerm = state.terms.length>1;
+
+  var badAnchors = state.terms.filter(function(T){
+    return !isSchoolDay(T.anchor.date) || nc[T.anchor.date];
+  });
+  warn.innerHTML = badAnchors.length ?
+    '<div class="anchor-warn">⚠️ '+badAnchors.map(function(T){
+      return (T.name||"A term")+"'s anchor ("+human(T.anchor.date,true)+") is a weekend or a marked no-class day";
+    }).join("; ")+'. Cycle math may be off — fix it in Settings.</div>' : "";
+
+  var html = '<div class="date-line">'+human(t,true)+'</div>';
+  var ci = cycleInfo(t, nc);
+  var todayIsPE = false;
+  var brk = isBreakDay(t, nc);
+
+  if(ci){
+    var T = termOf(t);
+    todayIsPE = isPEDay(ci.day);
+    html += '<div class="eyebrow">'+(multiTerm?(T.name||"Term")+" · ":"")+'Cycle '+ci.cycle+'</div>';
+    html += '<div class="big-day'+(todayIsPE?' pe-day':'')+'"><span class="big-word">DAY</span> '+ci.day+'</div>';
+    if(todayIsPE){
+      html += '<div class="badge pe">🏃 PE today — pack the uniform</div>';
+    }
+    var nx = nextClassDay(t, nc);
+    if(nx){
+      var nci = cycleInfo(nx, nc);
+      var nxPE = nci && isPEDay(nci.day);
+      var nxLabel = (nx===addDays(t,1)) ? "Tomorrow" : human(nx);
+      if(nxPE){
+        html += '<div><span class="badge pe-tmrw">🏃 '+nxLabel+' is PE (Day '+nci.day+')</span></div>';
+      }
+    }
+    /* today's events */
+    if(ev[t] && ev[t].length){
+      html += '<div class="today-evs">'+ev[t].map(function(e){
+        return '<span class="ev-chip'+(e.done?' done':'')+'" style="background:'+EMETA[e.type].bg+'">'+(e.done?'✓ ':'')+EMETA[e.type].emoji+' '+e.type+(e.note?' · '+esc(e.note):'')+'</span>';
+      }).join("")+'</div>';
+    }
+    html += '<div class="dots">';
+    for(var i=1;i<=state.cycleLength;i++){
+      var cls = "dot";
+      if(isPEDay(i)) cls+=" pe-slot";
+      if(i<ci.day) cls+=" done";
+      if(i===ci.day) cls+=" current";
+      html += '<span class="'+cls+'"></span>';
+    }
+    html += '</div><div class="dots-caption">Cycle '+ci.cycle+' · square dots are PE</div>';
+  } else if(nc[t] && isSchoolDay(t) && nc[t].reason==="Day 0"){
+    var e0 = nc[t];
+    html += '<div class="eyebrow" style="color:var(--r-dayzero)">Cycle paused</div>';
+    html += '<div class="big-day" style="color:var(--r-dayzero)"><span class="big-word">DAY</span> 0</div>';
+    html += '<div class="cycle-line">Classes today, but the cycle does not advance'+(e0.note?" · "+esc(e0.note):"")+'</div>';
+    var nx0 = nextClassDay(t, nc);
+    if(nx0){
+      var nci0 = cycleInfo(nx0, nc);
+      html += '<div><span class="badge off">Cycle '+nci0.cycle+' Day '+nci0.day+' moves to '+human(nx0)+(isPEDay(nci0.day)?" 🏃 PE":"")+'</span></div>';
+    }
+  } else if(nc[t] && isSchoolDay(t)){
+    var e = nc[t];
+    html += '<div class="eyebrow" style="color:var(--muted)">No classes</div>';
+    html += '<div class="big-day" style="font-size:3rem;color:var(--muted)">'+RMETA[e.reason].emoji+'</div>';
+    html += '<div class="cycle-line">'+e.reason+(e.note?" · "+esc(e.note):"")+'</div>';
+    var nx2 = nextClassDay(t, nc);
+    if(nx2){
+      var nci2 = cycleInfo(nx2, nc);
+      html += '<div><span class="badge off">Day '+nci2.day+' moves to '+human(nx2)+(isPEDay(nci2.day)?" 🏃":"")+'</span></div>';
+    }
+  } else if(brk){
+    var g = governingTerm(t);
+    html += '<div class="eyebrow" style="color:var(--muted)">Term break</div>';
+    html += '<div class="big-day" style="font-size:3rem;color:var(--muted)">🏖️</div>';
+    var nx4 = nextClassDay(t, nc);
+    if(nx4){
+      var T4 = termOf(nx4);
+      var nci4 = cycleInfo(nx4, nc);
+      html += '<div class="cycle-line">'+(g&&g.name?g.name+' ended':'Classes ended')+' '+human(g.end,true)+'</div>';
+      html += '<div><span class="badge off">'+(T4.name||'Next term')+' starts '+human(nx4,true)+' · Cycle '+nci4.cycle+' Day '+nci4.day+(isPEDay(nci4.day)?" 🏃 PE":"")+'</span></div>';
+    } else {
+      html += '<div class="cycle-line">Classes ended '+(g&&g.end?human(g.end,true):"")+'. When the new term is announced, tap this card to start it.</div>';
+    }
+  } else {
+    html += '<div class="eyebrow" style="color:var(--muted)">Weekend</div>';
+    html += '<div class="big-day" style="font-size:3rem;color:var(--muted)">😴</div>';
+    var nx3 = nextClassDay(t, nc);
+    if(nx3){
+      var nci3 = cycleInfo(nx3, nc);
+      html += '<div><span class="badge off">Next: '+human(nx3)+' · Cycle '+nci3.cycle+' Day '+nci3.day+(isPEDay(nci3.day)?" 🏃 PE":"")+'</span></div>';
+    }
+  }
+  html += '<div class="tap-hint">Wrong day, or a new term starting? Tap this card.</div>';
+  card.innerHTML = html;
+
+  /* suspension button */
+  btn.disabled=false; btn.style.opacity=1;
+  if(nc[t] && isSchoolDay(t)){
+    btn.textContent = (nc[t].reason==="Day 0") ? "✓ Undo Day 0 — today is a normal cycle day" : "✓ Undo — classes are on today";
+    btn.classList.add("undo");
+    btn.onclick = function(){ removeNonClass(t); renderToday(); };
+  } else if(isSchoolDay(t) && !brk){
+    btn.textContent = "✕ No classes / Day 0 today";
+    btn.classList.remove("undo");
+    btn.onclick = function(){ openReasonPicker(t, true); };
+  } else {
+    btn.textContent = brk ? "Term break — nothing to log" : "Weekend — nothing to log";
+    btn.classList.remove("undo");
+    btn.disabled = true;
+    btn.style.opacity=.5;
+    btn.onclick=null;
+  }
+
+  /* class schedule: today's if a class day, otherwise the next class day's */
+  var schedWrap = document.getElementById("schedWrap");
+  var schedTitle = document.getElementById("schedTitle");
+  var schedList = document.getElementById("schedList");
+  var schedTarget = null, schedCI = null;
+  if(ci){ schedTarget = t; schedCI = ci; }
+  else {
+    var nsd = nextClassDay(t, nc);
+    if(nsd){ schedTarget = nsd; schedCI = cycleInfo(nsd, nc); }
+  }
+  if(schedTarget && schedCI && schedFor(schedCI.day).length){
+    schedTitle.textContent = (schedTarget===t) ? "Today's classes · Day "+schedCI.day :
+      "Next classes · "+human(schedTarget)+" · Day "+schedCI.day;
+    schedList.innerHTML = schedRowsHTML(schedCI.day);
+    schedWrap.style.display="block";
+  } else {
+    schedWrap.style.display="none";
+  }
+
+  /* upcoming events list */
+  var evWrap = document.getElementById("evUpWrap");
+  var evList = document.getElementById("evUpList");
+  var upEvents = state.events.map(function(e){ return {e:e, d:dateOfEvent(e, nc)}; })
+    .filter(function(x){ return x.d && x.d>=t; })
+    .sort(function(a,b){ return a.d<b.d?-1:1; })
+    .slice(0,8);
+  if(upEvents.length){
+    evWrap.style.display="block";
+    evList.innerHTML = upEvents.map(function(x){
+      var e = x.e;
+      var dayTag = e.day ? ' · Day '+e.day : '';
+      var pin = e.date ? ' 📌' : '';
+      return '<div class="evu-item'+(e.done?' done':'')+'">'+
+        '<button class="evu-check'+(e.done?' on':'')+'" data-evcheck="'+e.id+'" aria-label="'+(e.done?'Mark not done':'Mark done')+'">'+(e.done?'✓':'')+'</button>'+
+        '<button class="evu-body" data-evdate="'+x.d+'" style="text-align:left;display:block;background:none;flex:1;min-width:0">'+
+        '<span class="evu-tag" style="background:'+EMETA[e.type].bg+'">'+EMETA[e.type].emoji+' '+e.type+'</span> '+
+        '<span class="evu-date">'+(x.d===t?"Today":human(x.d,true))+dayTag+pin+'</span>'+
+        (e.note?'<span class="evu-note">'+esc(e.note)+'</span>':'')+
+        '</button><span class="lg-arrow" style="color:var(--muted)">›</span></div>';
+    }).join("");
+    evList.querySelectorAll("[data-evdate]").forEach(function(b){
+      b.addEventListener("click", function(){ openDaySheet(b.dataset.evdate); });
+    });
+    evList.querySelectorAll("[data-evcheck]").forEach(function(b){
+      b.addEventListener("click", function(e){ e.stopPropagation(); toggleEventDone(b.dataset.evcheck); renderToday(); });
+    });
+  } else {
+    evWrap.style.display="none";
+    evList.innerHTML="";
+  }
+
+  /* next PE list */
+  var peList = document.getElementById("peList");
+  var pes = [], d = t, guard=0;
+  if(ci && todayIsPE) pes.push({date:t, day:ci.day, cycle:ci.cycle, today:true});
+  while(pes.length<3 && guard++<WALK_LIMIT){
+    d = nextClassDay(d, nc);
+    if(!d) break;
+    var x = cycleInfo(d, nc);
+    if(x && isPEDay(x.day)) pes.push({date:d, day:x.day, cycle:x.cycle});
+  }
+  peList.innerHTML = pes.length ? pes.map(function(p){
+    return '<div class="up-item pe">'+
+      '<div class="up-daychip">D'+p.day+'</div>'+
+      '<div class="up-date">'+(p.today?"Today · ":"")+human(p.date,true)+'</div>'+
+      '<div class="up-note">Cycle '+p.cycle+'</div></div>';
+  }).join("") : '<div class="empty-note">No PE days ahead — check your settings.</div>';
+
+  /* coming up: next 5 class days, with event dots */
+  var upList = document.getElementById("upList");
+  var ups=[], d2=t, g2=0;
+  while(ups.length<5 && g2++<WALK_LIMIT){
+    d2 = nextClassDay(d2, nc);
+    if(!d2) break;
+    var u = cycleInfo(d2, nc);
+    ups.push({date:d2, day:u.day, cycle:u.cycle, pe:isPEDay(u.day), subs:subjectsOn(u.day), term:termOf(d2), evs:ev[d2]||[]});
+  }
+  upList.innerHTML = ups.length ? ups.map(function(u){
+    var extra = u.subs.filter(function(n,i){ return !(u.pe && i===0); });
+    var termTag = (multiTerm && u.term && termOf(t)!==u.term) ? " · "+(u.term.name||"next term") : "";
+    var dots = u.evs.length ? '<span class="mini-dots">'+u.evs.slice(0,4).map(function(e){
+      return '<i class="'+(e.done?'done':'')+'" style="background:'+EMETA[e.type].bg+'" title="'+e.type+(e.done?' (done)':'')+'"></i>';
+    }).join("")+'</span>' : "";
+    return '<div class="up-item'+(u.pe?' pe':'')+'">'+
+      '<div class="up-daychip">D'+u.day+'</div>'+
+      '<div class="up-date">'+human(u.date)+'<span style="color:var(--muted);font-weight:500"> · Cycle '+u.cycle+termTag+'</span>'+dots+'</div>'+
+      (u.pe?'<div class="up-note">PE 🏃</div>':(extra.length?'<div class="up-note" style="color:var(--blue)">'+extra.join(", ")+'</div>':''))+
+      '</div>';
+  }).join("") : '<div class="empty-note">No school days ahead of today on record.</div>';
+
+  card.onclick = function(){ openReanchor(); };
+}
+
+/* ---------------- reason picker sheet (with optional range) ---------------- */
+function openReasonPicker(dateStr, isToday){
+  var html = '<h2>'+(isToday?"Today won\u2019t advance the cycle":"Mark "+human(dateStr,true))+'</h2>'+
+    '<div class="sheet-sub">'+human(dateStr,true)+' won\u2019t consume a cycle day — whatever day number it held shifts to the next school day. Pick <b>Day 0</b> if he still has school but the cycle is paused; pick any other reason if there are no classes at all.</div>'+
+    '<div class="field"><label for="rpThrough">Also mark school days through (optional — for multi-day breaks/holidays)</label><input type="date" id="rpThrough" min="'+dateStr+'"></div>'+
+    '<div class="reason-grid">'+
+    REASONS.map(function(r){
+      return '<button style="background:'+RMETA[r].bg+'" data-r="'+r+'"><span class="rb-emoji">'+RMETA[r].emoji+'</span>'+r+'</button>';
+    }).join("")+
+    '</div><button class="cancel">Cancel</button>';
+  openSheet(html);
+  sheet.querySelectorAll("[data-r]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var through = sheet.querySelector("#rpThrough").value;
+      if(through && through>dateStr){
+        var d = dateStr, guard=0;
+        while(d<=through && guard++<90){
+          if(isSchoolDay(d)) addNonClass(d, b.dataset.r, "");
+          d = addDays(d,1);
+        }
+      } else {
+        addNonClass(dateStr, b.dataset.r, "");
+      }
+      closeSheet();
+      refreshAll();
+    });
+  });
+  sheet.querySelector(".cancel").addEventListener("click", closeSheet);
+}
+
+function addNonClass(dateStr, reason, note){
+  removeNonClass(dateStr, true);
+  state.nonClassDays.push({date:dateStr, reason:reason, note:note||""});
+  state.nonClassDays.sort(function(a,b){ return a.date<b.date?-1:1; });
+  save();
+}
+function removeNonClass(dateStr, silent){
+  state.nonClassDays = state.nonClassDays.filter(function(e){ return e.date!==dateStr; });
+  if(!silent) save();
+}
+
+/* ---------------- re-anchor sheet ---------------- */
+function openReanchor(){
+  var t = todayStr();
+  var nc = ncMap();
+  if(!isSchoolDay(t)){
+    openSheet('<h2>Re-anchor</h2><div class="sheet-sub">Today is a weekend, so it can\u2019t carry a cycle day. Wait for a school day, or edit the terms in Settings using a known school day.</div><button class="cancel">Close</button>');
+    sheet.querySelector(".cancel").addEventListener("click", closeSheet);
+    return;
+  }
+  var brk = isBreakDay(t, nc);
+  var html = '<h2>Re-anchor</h2>';
+  if(brk){
+    html += '<div class="sheet-sub">Today falls in a term break. If the new term actually starts today, begin it here.</div>';
+  } else {
+    html += '<div class="sheet-sub">What happened?</div>'+
+      '<button class="pri-btn" id="raFix">Fix today\u2019s cycle day (same term)</button>';
+  }
+  html += '<button class="'+(brk?'pri-btn':'sec-btn')+'" id="raNew">Start a new term today</button>'+
+    '<button class="cancel">Cancel</button>';
+  openSheet(html);
+  sheet.querySelector(".cancel").addEventListener("click", closeSheet);
+  var fixBtn = sheet.querySelector("#raFix");
+  if(fixBtn) fixBtn.addEventListener("click", function(){ openFixToday(); });
+  sheet.querySelector("#raNew").addEventListener("click", function(){ openNewTerm(); });
+}
+
+function openFixToday(){
+  var t = todayStr();
+  var nc = ncMap();
+  var ci = cycleInfo(t, nc);
+  var T = termOf(t);
+  var curC = ci?ci.cycle:1, curD = ci?ci.day:1;
+  var noteLine = nc[t] ? '<div class="sheet-sub" style="color:var(--danger)">Today is marked as a no-class day. Fixing will remove that mark and treat today as a class day.</div>' : "";
+  var html = '<h2>Fix today\u2019s cycle day</h2>'+
+    '<div class="sheet-sub">Per the school\u2019s announcement, what is today ('+human(t,true)+') actually? This re-anchors '+(T.name||"the current term")+' to today.</div>'+noteLine+
+    '<div class="two">'+
+      '<div class="field"><label for="raC">Cycle #</label><input type="number" id="raC" min="1" inputmode="numeric" value="'+curC+'"></div>'+
+      '<div class="field"><label for="raD">Day # (1–'+state.cycleLength+')</label><input type="number" id="raD" min="1" max="'+state.cycleLength+'" inputmode="numeric" value="'+curD+'"></div>'+
+    '</div>'+
+    '<button class="pri-btn" id="raSave">Set today as this cycle day</button>'+
+    '<button class="cancel">Cancel</button>';
+  openSheet(html);
+  sheet.querySelector(".cancel").addEventListener("click", closeSheet);
+  sheet.querySelector("#raSave").addEventListener("click", function(){
+    var c = parseInt(sheet.querySelector("#raC").value,10);
+    var d = parseInt(sheet.querySelector("#raD").value,10);
+    if(!(c>=1) || !(d>=1) || d>state.cycleLength){ alert("Enter a cycle ≥ 1 and a day between 1 and "+state.cycleLength+"."); return; }
+    removeNonClass(t, true);
+    var T = termOf(t);
+    T.anchor = {date:t, cycle:c, day:d};
+    save(); closeSheet(); refreshAll();
+  });
+}
+
+function openNewTerm(){
+  var t = todayStr();
+  var nc = ncMap();
+  var lastTerm = state.terms[state.terms.length-1];
+  if(lastTerm.anchor.date >= t){
+    openSheet('<h2>Start a new term</h2><div class="sheet-sub">The latest term already starts on or after today ('+human(lastTerm.anchor.date,true)+'). Edit the terms in Settings instead.</div><button class="cancel">Close</button>');
+    sheet.querySelector(".cancel").addEventListener("click", closeSheet);
+    return;
+  }
+  var defEnd = lastTerm.end || prevClassDay(t, nc) || addDays(t,-1);
+  var defName = "Term "+(state.terms.length+1);
+  var html = '<h2>Start a new term today</h2>'+
+    '<div class="sheet-sub">Today ('+human(t,true)+') becomes the new term\u2019s anchor. Weekdays between the old term\u2019s last day and today become term break — no logging needed.</div>'+
+    '<div class="field"><label for="ntName">Term name</label><input id="ntName" type="text" value="'+defName+'"></div>'+
+    '<div class="two">'+
+      '<div class="field"><label for="ntC">Cycle #</label><input type="number" id="ntC" min="1" inputmode="numeric" value="1"></div>'+
+      '<div class="field"><label for="ntD">Day # (1–'+state.cycleLength+')</label><input type="number" id="ntD" min="1" max="'+state.cycleLength+'" inputmode="numeric" value="1"></div>'+
+    '</div>'+
+    '<div class="field"><label for="ntPrevEnd">'+(lastTerm.name||"Previous term")+'\u2019s last day of classes</label><input id="ntPrevEnd" type="date" value="'+defEnd+'"></div>'+
+    '<button class="pri-btn" id="ntSave">Start '+defName+'</button>'+
+    '<button class="cancel">Cancel</button>';
+  openSheet(html);
+  sheet.querySelector(".cancel").addEventListener("click", closeSheet);
+  sheet.querySelector("#ntSave").addEventListener("click", function(){
+    var c = parseInt(sheet.querySelector("#ntC").value,10);
+    var d = parseInt(sheet.querySelector("#ntD").value,10);
+    var name = sheet.querySelector("#ntName").value.trim() || defName;
+    var prevEnd = sheet.querySelector("#ntPrevEnd").value;
+    if(!(c>=1) || !(d>=1) || d>state.cycleLength){ alert("Enter a cycle ≥ 1 and a day between 1 and "+state.cycleLength+"."); return; }
+    if(!prevEnd || prevEnd>=t || prevEnd<lastTerm.anchor.date){ alert("The previous term's last day must be between its anchor and yesterday."); return; }
+    lastTerm.end = prevEnd;
+    removeNonClass(t, true);
+    state.terms.push({id:"t"+gid(), name:name, anchor:{date:t, cycle:c, day:d}, end:null});
+    save(); closeSheet(); refreshAll();
+  });
+}
+
+/* ---------------- CALENDAR view ---------------- */
+var calY, calM;
+(function(){ var t=parseD(todayStr()); calY=t.getFullYear(); calM=t.getMonth(); })();
+document.getElementById("calPrev").addEventListener("click", function(){ calM--; if(calM<0){calM=11;calY--;} renderCal(); });
+document.getElementById("calNext").addEventListener("click", function(){ calM++; if(calM>11){calM=0;calY++;} renderCal(); });
+document.getElementById("calToday").addEventListener("click", function(){ var t=parseD(todayStr()); calY=t.getFullYear(); calM=t.getMonth(); renderCal(); });
+
+function renderCal(){
+  var nc = ncMap();
+  var ev = evByDate(nc);
+  var t = todayStr();
+  document.getElementById("calLabel").textContent = MONTHS[calM]+" "+calY;
+  /* event legend */
+  document.getElementById("evLegend").innerHTML = EVENT_TYPES.map(function(x){
+    return '<span><span class="lg round" style="background:'+EMETA[x].bg+'"></span>'+x+'</span>';
+  }).join("")+'<span><span class="lg round" style="background:var(--r-break)"></span>Term break (no-class)</span>';
+  var grid = document.getElementById("calGrid");
+  var dows = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  var html = dows.map(function(x,i){ return '<div class="cal-dow'+(i>4?' wk':'')+'">'+x+'</div>'; }).join("");
+  var first = new Date(calY, calM, 1);
+  var lead = (first.getDay()+6)%7;
+  var dim = new Date(calY, calM+1, 0).getDate();
+  for(var i=0;i<lead;i++) html += '<button class="cal-cell" disabled aria-hidden="true"></button>';
+  for(var day=1;day<=dim;day++){
+    var s = calY+"-"+pad(calM+1)+"-"+pad(day);
+    var wknd = !isSchoolDay(s);
+    var e = nc[s];
+    var ci = cycleInfo(s, nc);
+    var brk = isBreakDay(s, nc);
+    var cls = "cal-cell";
+    var inner = '<span class="dnum">'+day+'</span>';
+    var aria = human(s,true);
+    if(s===t) cls+=" today-cell";
+    if(wknd){ cls+=" weekend"; aria+=", weekend"; }
+    else if(e && !inDomain(s)){
+      cls+=" brk"; inner+='<span class="bmark">brk</span>'; aria+=", term break";
+    }
+    else if(e && e.reason==="Day 0"){
+      cls+=" dayzero";
+      inner += '<span class="cchip d0">D0</span>';
+      aria+=", Day 0 — cycle does not advance";
+    }
+    else if(e){
+      cls+=" noclass";
+      inner += '<span class="remoji" title="'+e.reason+'">'+RMETA[e.reason].emoji+'</span>';
+      aria+=", no classes: "+e.reason;
+    } else if(brk){
+      cls+=" brk";
+      inner += '<span class="bmark">brk</span>';
+      aria+=", term break";
+    } else if(ci){
+      var pe = isPEDay(ci.day);
+      inner += '<span class="cchip'+(pe?' pe':'')+'">D'+ci.day+'</span>';
+      if(ci.day===1) inner += '<span class="cyc-mark">C'+ci.cycle+'</span>';
+      aria+=", cycle "+ci.cycle+" day "+ci.day+(pe?", PE day":"");
+    }
+    /* event dots (shown on any weekday) */
+    if(!wknd){
+      var evs = ev[s]||[];
+      if(evs.length){
+        var dotHtml = evs.slice(0,4).map(function(x){
+          return '<i class="'+(x.done?'done':'')+'" style="background:'+EMETA[x.type].bg+'"></i>';
+        }).join("");
+        if(evs.length>4) dotHtml += '<span class="more">+</span>';
+        inner += '<span class="edots">'+dotHtml+'</span>';
+        aria += ", "+evs.length+" event"+(evs.length>1?"s":"");
+      }
+    }
+    html += '<button class="'+cls+'" data-date="'+s+'" aria-label="'+aria+'">'+inner+'</button>';
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll("[data-date]").forEach(function(b){
+    b.addEventListener("click", function(){ onCalTap(b.dataset.date); });
+  });
+}
+function onCalTap(s){
+  if(!isSchoolDay(s)){
+    openSheet('<h2>'+human(s,true)+'</h2><div class="sheet-sub">Weekends never carry a cycle day, so there\u2019s nothing to mark here.</div><button class="cancel">Close</button>');
+    sheet.querySelector(".cancel").addEventListener("click", closeSheet);
+    return;
+  }
+  openDaySheet(s);
+}
+
+/* ---------------- combined day sheet: events + no-class controls ---------------- */
+function openDaySheet(s){
+  var nc = ncMap();
+  var ev = evByDate(nc);
+  var ci = cycleInfo(s, nc);
+  var e = nc[s];
+  var brk = isBreakDay(s, nc);
+  var status;
+  if(ci) status = 'Cycle '+ci.cycle+' · Day '+ci.day+(isPEDay(ci.day)?' · 🏃 PE day':'');
+  else if(e && e.reason==="Day 0") status = '0️⃣ Day 0 — classes, but the cycle does not advance'+(e.note?' ('+esc(e.note)+')':'');
+  else if(e) status = RMETA[e.reason].emoji+' No classes — '+e.reason+(e.note?' ('+esc(e.note)+')':'');
+  else if(brk) status = '🏖️ Term break — no cycle day';
+  else status = '';
+
+  var evs = ev[s]||[];
+  var html = '<h2>'+human(s,true)+'</h2>'+
+    '<div class="sheet-sub">'+status+'</div>';
+
+  /* class schedule for this cycle day */
+  if(ci && schedFor(ci.day).length){
+    html += '<div class="sched-mini">'+schedRowsHTML(ci.day)+'</div>';
+  }
+
+  /* events section */
+  html += '<div class="field"><label>Events this day</label>'+
+    (ci ? '<p class="hint" style="margin:0 0 8px">Tied to Cycle '+ci.cycle+' Day '+ci.day+' — if classes get cancelled, these shift to the new date of Day '+ci.day+' automatically.</p>'
+        : '<p class="hint" style="margin:0 0 8px">This day has no cycle day, so events added here stay pinned to the date.</p>');
+  html += '<div class="ev-list" id="dsEvList">'+ (evs.length ? evs.map(function(x){
+      return '<div class="ev-row'+(x.done?' done':'')+'">'+
+        '<button class="ev-done-btn'+(x.done?' on':'')+'" data-evdone="'+x.id+'" aria-label="'+(x.done?'Mark not done':'Mark done')+'">'+(x.done?'✓':'○')+'</button>'+
+        '<span class="ev-chip" style="background:'+EMETA[x.type].bg+'">'+EMETA[x.type].emoji+' '+x.type+(x.date?' 📌':'')+'</span>'+
+        '<input class="ev-note-in" data-evnote="'+x.id+'" value="'+esc(x.note||"")+'" placeholder="Add what to do / study…" autocapitalize="sentences">'+
+        '<button class="ev-del" data-evid="'+x.id+'" aria-label="Delete event">✕</button></div>';
+    }).join("") : '<div class="hint" style="margin:0">None yet — add one below.</div>') +'</div>';
+  html += '<div class="ev-saved" id="dsSaved"></div>';
+  html += '<label style="display:block;font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:5px">Add an item — tap a type below (you can fill the description before or after):</label>';
+  html += '<input id="dsNote" type="text" placeholder="Description, e.g. Math — study fractions p.12" autocapitalize="sentences" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px">';
+  html += '<div class="ev-add-pills">'+EVENT_TYPES.map(function(x){
+      return '<button data-evtype="'+x+'" style="background:'+EMETA[x].bg+'">+ '+EMETA[x].emoji+' '+x+'</button>';
+    }).join("")+'</div></div>';
+
+  html += '<hr class="divider">';
+
+  /* no-class section */
+  if(e){
+    html += '<div class="field"><label>No-class reason</label><div class="reason-pills">'+
+      REASONS.map(function(r){
+        var sel = r===e.reason;
+        return '<button data-r="'+r+'" class="'+(sel?'sel':'')+'" style="'+(sel?'background:'+RMETA[r].bg:'')+'">'+RMETA[r].emoji+' '+r+'</button>';
+      }).join("")+
+      '</div></div>'+
+      '<div class="field"><label for="dsNcNote">No-class note (optional)</label><input id="dsNcNote" type="text" value="'+esc(e.note||"")+'" placeholder="e.g. Typhoon signal #3"></div>'+
+      '<button class="pri-btn" id="dsNcSave">Save no-class changes</button>'+
+      '<button class="sec-btn warn-btn" id="dsNcDel">Remove — this was a normal cycle day</button>';
+  } else if(brk){
+    var g = governingTerm(s);
+    html += '<div class="hint">This weekday falls in a term break'+(g&&g.end?' — '+(g.name||'the previous term')+' ended '+human(g.end,true):'')+'. It carries no cycle day and needs no logging. Term dates are editable in Settings.</div>';
+  } else {
+    html += '<button class="sec-btn warn-btn" id="dsNcMark" style="margin-top:0">✕ No classes / Day 0 this day…</button>';
+  }
+  html += '<button class="cancel">Close</button>';
+  openSheet(html);
+
+  /* wire events */
+  sheet.querySelectorAll("[data-evtype]").forEach(function(b){
+    b.addEventListener("click", function(){
+      addEvent(s, b.dataset.evtype, sheet.querySelector("#dsNote").value.trim());
+      openDaySheet(s);        /* re-open to show the new entry */
+      refreshBehindSheet();
+      /* focus the description box of the item just added (last of its type) */
+      var inputs = sheet.querySelectorAll("[data-evnote]");
+      if(inputs.length){ var last=inputs[inputs.length-1]; last.focus(); }
+    });
+  });
+  sheet.querySelectorAll("[data-evid]").forEach(function(b){
+    b.addEventListener("click", function(){
+      removeEvent(b.dataset.evid);
+      openDaySheet(s);
+      refreshBehindSheet();
+    });
+  });
+  sheet.querySelectorAll("[data-evdone]").forEach(function(b){
+    b.addEventListener("click", function(){
+      toggleEventDone(b.dataset.evdone);
+      openDaySheet(s);
+      refreshBehindSheet();
+    });
+  });
+  sheet.querySelectorAll("[data-evnote]").forEach(function(inp){
+    var flash=function(){
+      setEventNote(inp.dataset.evnote, inp.value.trim());
+      var sv=document.getElementById("dsSaved"); if(sv){ sv.textContent="Saved ✓"; setTimeout(function(){ if(sv) sv.textContent=""; },1200); }
+      refreshBehindSheet();
+    };
+    inp.addEventListener("change", flash);   /* fires on blur / Enter */
+  });
+  var chosen = e ? e.reason : null;
+  sheet.querySelectorAll("[data-r]").forEach(function(b){
+    b.addEventListener("click", function(){
+      chosen = b.dataset.r;
+      sheet.querySelectorAll("[data-r]").forEach(function(x){
+        var sel = x.dataset.r===chosen;
+        x.classList.toggle("sel", sel);
+        x.style.background = sel?RMETA[x.dataset.r].bg:"";
+      });
+    });
+  });
+  var ncSave = sheet.querySelector("#dsNcSave");
+  if(ncSave) ncSave.addEventListener("click", function(){
+    addNonClass(s, chosen, sheet.querySelector("#dsNcNote").value.trim());
+    closeSheet(); refreshAll();
+  });
+  var ncDel = sheet.querySelector("#dsNcDel");
+  if(ncDel) ncDel.addEventListener("click", function(){
+    removeNonClass(s);
+    closeSheet(); refreshAll();
+  });
+  var ncMark = sheet.querySelector("#dsNcMark");
+  if(ncMark) ncMark.addEventListener("click", function(){
+    openReasonPicker(s, false);
+  });
+  sheet.querySelector(".cancel").addEventListener("click", function(){ closeSheet(); refreshAll(); });
+}
+function refreshBehindSheet(){
+  /* keep the views behind the sheet in sync without closing it */
+  var active = document.querySelector(".view.active").id.replace("view-","");
+  if(active==="today") renderToday();
+  if(active==="cal") renderCal();
+  if(active==="log") renderLog();
+}
+
+/* ---------------- LOG view ---------------- */
+function renderLog(){
+  var list = document.getElementById("logList");
+  if(!state.nonClassDays.length){
+    list.innerHTML = '<div class="empty-note">No holidays, suspensions, or Day 0s recorded yet.<br>Use the big button on the Today tab, or tap a date in the calendar.</div>';
+    return;
+  }
+  var t = todayStr();
+  list.innerHTML = state.nonClassDays.map(function(e){
+    return '<button class="log-item" data-date="'+e.date+'">'+
+      '<div class="lg-date">'+human(e.date,true).replace(", "+parseD(e.date).getFullYear(), "<br><span style='font-weight:600;color:var(--muted)'>"+parseD(e.date).getFullYear()+"</span>")+'</div>'+
+      '<div class="lg-body"><span class="lg-reason '+RMETA[e.reason].cls+'">'+RMETA[e.reason].emoji+' '+e.reason+'</span>'+
+      (e.note?'<div class="lg-note">'+esc(e.note)+'</div>':'')+
+      (e.date>t?'<div class="lg-note">upcoming</div>':'')+
+      '</div><span class="lg-arrow">›</span></button>';
+  }).join("");
+  list.querySelectorAll("[data-date]").forEach(function(b){
+    b.addEventListener("click", function(){ openDaySheet(b.dataset.date); });
+  });
+}
+
+/* ---------------- SETTINGS view ---------------- */
+var DOW_LABELS=["Su","Mo","Tu","We","Th","Fr","Sa"];
+function renderSettings(){
+  document.getElementById("setLen").value = state.cycleLength;
+  renderTerms();
+  var dg = document.getElementById("dowGrid");
+  dg.innerHTML = [1,2,3,4,5,6,0].map(function(d){
+    var on = state.schoolDays.indexOf(d)!==-1;
+    return '<label class="'+(on?'on':'')+'">'+DOW_LABELS[d]+'<input type="checkbox" data-d="'+d+'" '+(on?'checked':'')+'></label>';
+  }).join("");
+  dg.querySelectorAll("input").forEach(function(cb){
+    cb.addEventListener("change", function(){ cb.parentElement.classList.toggle("on", cb.checked); });
+  });
+  renderSubjects();
+  renderSyncCard();
+  renderSchedEditor();
+  document.getElementById("setMsg").textContent="";
+}
+var schedEditDay = 1;
+var schedDraft = null;   /* working copy so switching pills keeps edits until Save */
+function schedSerialize(rows){
+  return rows.map(function(r){ return (r.t ? r.t+" | " : "")+r.s; }).join("\n");
+}
+function schedParse(text){
+  return text.split("\n").map(function(l){ return l.trim(); }).filter(Boolean).map(function(l){
+    var i = l.indexOf("|");
+    if(i>=0) return {t:l.slice(0,i).trim(), s:l.slice(i+1).trim()};
+    return {t:"", s:l};
+  }).filter(function(r){ return r.s; });
+}
+function schedStash(){
+  if(!schedDraft) return;
+  schedDraft[String(schedEditDay)] = schedParse(document.getElementById("schedText").value);
+}
+function renderSchedEditor(){
+  schedDraft = JSON.parse(JSON.stringify(state.timetable||{}));
+  if(schedEditDay > state.cycleLength) schedEditDay = 1;
+  var pills = document.getElementById("schedPills");
+  var html = "";
+  for(var i=1;i<=state.cycleLength;i++){
+    html += '<button data-sd="'+i+'" class="'+(i===schedEditDay?'sel':'')+'">D'+i+'</button>';
+  }
+  pills.innerHTML = html;
+  pills.querySelectorAll("[data-sd]").forEach(function(b){
+    b.addEventListener("click", function(){
+      schedStash();
+      schedEditDay = parseInt(b.dataset.sd,10);
+      pills.querySelectorAll("[data-sd]").forEach(function(x){ x.classList.toggle("sel", x===b); });
+      document.getElementById("schedText").value = schedSerialize(schedDraft[String(schedEditDay)]||[]);
+    });
+  });
+  document.getElementById("schedText").value = schedSerialize((state.timetable||{})[String(schedEditDay)]||[]);
+}
+function renderSyncCard(){
+  var u = document.getElementById("syncUrlIn"), c = document.getElementById("syncCodeIn"), off = document.getElementById("syncOff");
+  if(!u) return;
+  u.value = (sync && sync.url) || "";
+  c.value = (sync && sync.code) || "";
+  off.style.display = syncActive() ? "block" : "none";
+  if(syncActive()) setSyncStatus("Sync is on.", true);
+}
+function termRowHTML(T){
+  T = T || {name:"", anchor:{date:"",cycle:1,day:1}, end:null};
+  return '<div class="t-head"><input class="t-name" type="text" value="'+esc(T.name||"")+'" placeholder="Term name" aria-label="Term name">'+
+    '<button class="icon-btn t-del" aria-label="Remove term">✕</button></div>'+
+    '<div class="set-row"><label>Anchor date</label><input class="t-date" type="date" value="'+T.anchor.date+'"></div>'+
+    '<div class="set-row"><label>= Cycle #</label><input class="t-cycle" type="number" min="1" inputmode="numeric" value="'+T.anchor.cycle+'"></div>'+
+    '<div class="set-row"><label>= Day #</label><input class="t-day" type="number" min="1" inputmode="numeric" value="'+T.anchor.day+'"></div>'+
+    '<div class="set-row"><label>Last day of classes</label><input class="t-end" type="date" value="'+(T.end||"")+'"></div>';
+}
+function attachTermDel(div){
+  div.querySelector(".t-del").addEventListener("click", function(){
+    if(document.querySelectorAll("#termList .term-box").length<=1){
+      alert("At least one term is required."); return;
+    }
+    if(confirm("Remove this term? Its dates will show no cycle day unless another term covers them.")) div.remove();
+  });
+}
+function renderTerms(){
+  var box = document.getElementById("termList");
+  box.innerHTML = "";
+  state.terms.forEach(function(T){
+    var div = document.createElement("div");
+    div.className="term-box";
+    div.dataset.tid = T.id || "";
+    div.innerHTML = termRowHTML(T);
+    attachTermDel(div);
+    box.appendChild(div);
+  });
+}
+document.getElementById("addTerm").addEventListener("click", function(){
+  var box = document.getElementById("termList");
+  var div = document.createElement("div");
+  div.className="term-box";
+  div.dataset.tid = "";
+  div.innerHTML = termRowHTML(null);
+  attachTermDel(div);
+  box.appendChild(div);
+});
+function renderSubjects(){
+  var box = document.getElementById("subjList");
+  box.innerHTML = state.subjects.map(function(s){
+    return '<div class="subj-row">'+
+      '<input class="s-name" type="text" value="'+esc(s.name)+'" placeholder="Subject" aria-label="Subject name">'+
+      '<input class="s-days" type="text" inputmode="numeric" value="'+s.days.join(",")+'" placeholder="4,7" aria-label="Cycle days">'+
+      '<button class="icon-btn" aria-label="Remove subject">✕</button></div>';
+  }).join("");
+  box.querySelectorAll(".subj-row .icon-btn").forEach(function(b){
+    b.addEventListener("click", function(){ b.parentElement.remove(); });
+  });
+}
+document.getElementById("addSubj").addEventListener("click", function(){
+  var box = document.getElementById("subjList");
+  var div = document.createElement("div");
+  div.className="subj-row";
+  div.innerHTML = '<input class="s-name" type="text" placeholder="Subject" aria-label="Subject name">'+
+    '<input class="s-days" type="text" inputmode="numeric" placeholder="e.g. 2,5" aria-label="Cycle days">'+
+    '<button class="icon-btn" aria-label="Remove subject">✕</button>';
+  div.querySelector(".icon-btn").addEventListener("click", function(){ div.remove(); });
+  box.appendChild(div);
+});
+document.getElementById("saveSettings").addEventListener("click", function(){
+  var msg = document.getElementById("setMsg");
+  var len = parseInt(document.getElementById("setLen").value,10);
+  if(!(len>=1&&len<=30)){ msg.textContent="Cycle length must be 1–30."; msg.className="msg err"; return; }
+  var terms = [];
+  var termErr = null;
+  document.querySelectorAll("#termList .term-box").forEach(function(row,i){
+    if(termErr) return;
+    var name = row.querySelector(".t-name").value.trim() || ("Term "+(i+1));
+    var date = row.querySelector(".t-date").value;
+    var c = parseInt(row.querySelector(".t-cycle").value,10);
+    var d = parseInt(row.querySelector(".t-day").value,10);
+    var end = row.querySelector(".t-end").value || null;
+    if(!date || !(c>=1) || !(d>=1) || d>len){ termErr = name+" needs an anchor date, cycle ≥ 1, and day between 1 and "+len+"."; return; }
+    if(end && end<date){ termErr = name+"'s last day can't be before its anchor."; return; }
+    terms.push({id: row.dataset.tid || ("t"+gid()), name:name, anchor:{date:date, cycle:c, day:d}, end:end});
+  });
+  if(termErr){ msg.textContent=termErr; msg.className="msg err"; return; }
+  if(!terms.length){ msg.textContent="At least one term is required."; msg.className="msg err"; return; }
+  terms.sort(function(a,b){ return a.anchor.date<b.anchor.date?-1:1; });
+  for(var i=0;i<terms.length-1;i++){
+    if(!terms[i].end){ msg.textContent=terms[i].name+" needs a last-day-of-classes date, since another term follows it."; msg.className="msg err"; return; }
+    if(terms[i].end >= terms[i+1].anchor.date){ msg.textContent=terms[i].name+"'s last day must be before "+terms[i+1].name+"'s anchor."; msg.className="msg err"; return; }
+  }
+  var sd = [];
+  document.querySelectorAll("#dowGrid input").forEach(function(cb){ if(cb.checked) sd.push(parseInt(cb.dataset.d,10)); });
+  if(!sd.length){ msg.textContent="Pick at least one school day."; msg.className="msg err"; return; }
+  var subs = [];
+  var bad = false;
+  document.querySelectorAll("#subjList .subj-row").forEach(function(row){
+    var name = row.querySelector(".s-name").value.trim();
+    var daysRaw = row.querySelector(".s-days").value.trim();
+    if(!name && !daysRaw) return;
+    var days = daysRaw.split(/[,\s]+/).filter(Boolean).map(Number);
+    if(!name || !days.length || days.some(function(n){ return !(n>=1&&n<=len); })){ bad=true; return; }
+    subs.push({name:name, days:days});
+  });
+  if(bad){ msg.textContent="Each subject needs a name and day numbers between 1 and "+len+"."; msg.className="msg err"; return; }
+  schedStash();
+  if(schedDraft) state.timetable = schedDraft;
+  state.cycleLength = len;
+  state.terms = terms;
+  state.schoolDays = sd;
+  state.subjects = subs;
+  save();
+  msg.textContent = "Saved."; msg.className="msg ok";
+  renderSettings();
+});
+
+/* ---------------- sync controls ---------------- */
+document.getElementById("syncGen").addEventListener("click", function(){
+  document.getElementById("syncCodeIn").value = "fam-"+gid()+gid();
+});
+document.getElementById("syncConnect").addEventListener("click", function(){
+  var url = document.getElementById("syncUrlIn").value.trim();
+  var code = document.getElementById("syncCodeIn").value.trim();
+  if(!/^https:\/\/[^\s\/]+\.(firebasedatabase\.app|firebaseio\.com)\/?$/.test(url)){
+    setSyncStatus("That doesn't look like a Firebase database URL (https://…firebasedatabase.app).", false); return;
+  }
+  if(code.length < 8){ setSyncStatus("Family code must be at least 8 characters — tap Generate.", false); return; }
+  sync = {url:url, code:code, enabled:true, device:(sync && sync.device) || ("d"+gid())};
+  saveSyncCfg();
+  setSyncStatus("Connecting…", true);
+  fetch(syncEndpoint()).then(function(r){ return r.json(); }).then(function(p){
+    if(p && p.state){
+      if(confirm("Cloud data found (last updated "+new Date(p.updatedAt).toLocaleString()+").\n\nOK = use the cloud data on this phone.\nCancel = overwrite the cloud with this phone's data.")){
+        lastStamp = 0; applyRemote(p);
+      } else { pushState(); }
+    } else { pushState(); }
+    startStream();
+    renderSyncCard();
+  }).catch(function(){ setSyncStatus("Couldn't reach the database — check the URL and your connection.", false); });
+});
+document.getElementById("syncOff").addEventListener("click", function(){
+  stopSync();
+  renderSyncCard();
+  setSyncStatus("Sync is off. Data now stays on this phone only.", true);
+});
+
+/* ---------------- export / import ---------------- */
+document.getElementById("exportBtn").addEventListener("click", function(){
+  var box = document.getElementById("exportBox");
+  box.value = JSON.stringify(state, null, 2);
+  box.style.display="block";
+  document.getElementById("copyBtn").style.display="block";
+  box.focus(); box.select();
+});
+document.getElementById("copyBtn").addEventListener("click", function(){
+  var box = document.getElementById("exportBox");
+  box.focus(); box.select();
+  var m = document.getElementById("ioMsg");
+  function done(){ m.textContent="Copied — paste it somewhere safe (notes, email to yourself)."; m.className="msg ok"; }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(box.value).then(done, function(){ try{document.execCommand("copy");done();}catch(e){} });
+  } else { try{document.execCommand("copy");done();}catch(e){} }
+});
+document.getElementById("importToggle").addEventListener("click", function(){
+  document.getElementById("importBox").style.display="block";
+  document.getElementById("importBtn").style.display="block";
+});
+document.getElementById("importBtn").addEventListener("click", function(){
+  var m = document.getElementById("ioMsg");
+  try{
+    var s = migrate(JSON.parse(document.getElementById("importBox").value));
+    if(!s || !s.cycleLength || !Array.isArray(s.nonClassDays) || !Array.isArray(s.schoolDays) || !Array.isArray(s.subjects) || !Array.isArray(s.terms) || !s.terms.length || !Array.isArray(s.events)){
+      throw new Error("shape");
+    }
+    if(!confirm("Replace ALL current data with this backup? This can't be undone.")) return;
+    state = s;
+    save();
+    upgradeEvents();
+    m.textContent="Imported. Everything recalculated from the backup."; m.className="msg ok";
+    refreshAll(); renderSettings();
+  }catch(e){
+    m.textContent="That doesn't look like a valid backup — paste the full exported JSON (any version)."; m.className="msg err";
+  }
+});
+
+/* ---------------- refresh ---------------- */
+function refreshAll(){
+  var active = document.querySelector(".view.active").id.replace("view-","");
+  if(active==="today") renderToday();
+  if(active==="cal") renderCal();
+  if(active==="log") renderLog();
+}
+document.addEventListener("visibilitychange", function(){
+  if(!document.hidden){ refreshAll(); cloudPull(); }
+});
+window.addEventListener("online", function(){ if(syncActive()){ cloudPull(); setTimeout(pushState, 1200); } });
+
+upgradeEvents();
+initSync();
+renderToday();
+})();
+</script>
+</body>
+</html>
