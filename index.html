@@ -347,6 +347,14 @@ nav button.active{color:var(--blue)}
 .ev-row .ev-note-in::placeholder{color:var(--muted)}
 .ev-row .ev-del{width:38px;height:38px;border-radius:8px;background:var(--grey-day);color:var(--danger);font-weight:800;flex:none}
 .ev-saved{font-size:.72rem;font-weight:700;color:var(--ok);margin:2px 0 8px 2px;min-height:.9em}
+.ev-row2{display:flex;flex-direction:column;gap:5px;margin-bottom:4px}
+.ev-due{display:flex;align-items:center;gap:8px;padding-left:2px}
+.ev-due-lbl{font-size:.74rem;font-weight:700;color:var(--muted);white-space:nowrap}
+.ev-due-in{border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font-size:.82rem;color:var(--ink);flex:1;min-width:0}
+.ev-row2.done .ev-due-lbl{text-decoration:line-through}
+.cal-cell.hasprep{background:#FFFBED}
+.cal-cell .prepbar{position:absolute;left:6px;right:6px;bottom:1px;height:3px;border-radius:2px}
+.cal-cell .givendot{position:absolute;top:2px;left:3px;width:6px;height:6px;border-radius:50%;border:1.5px solid #B4BCCB;background:transparent}
 .ev-done-btn{width:38px;height:38px;border-radius:8px;background:var(--grey-day);color:var(--muted);font-size:1.1rem;font-weight:800;flex:none;border:1.5px solid var(--line)}
 .ev-done-btn.on{background:var(--ok);color:#fff;border-color:var(--ok)}
 .ev-row.done .ev-chip{opacity:.55}
@@ -417,6 +425,8 @@ footer{
       <span><span class="lg" style="background:var(--r-dayzero)"></span>Day 0</span>
       <span><span class="lg" style="background:var(--r-async)"></span>Async 💻/🏠</span>
       <span><span style="color:#B08900">✎</span>Set by school</span>
+      <span><span class="lg round" style="background:#5A6ACF"></span>🎒 Bring/Prepare</span>
+      <span><span class="givendot" style="position:static;display:inline-block"></span>Given (assigned)</span>
     </div>
     <div class="cal-legend" id="evLegend"></div>
     <p class="hint" style="padding:0 4px">Tap any weekday to add homework, quizzes, tests, recitations, or exams — events follow the cycle day and shift automatically when classes are cancelled. Tap a day to mark it no-class too. Weekdays between terms show as “brk”.</p>
@@ -494,7 +504,7 @@ footer{
       <p class="hint">Data lives only in this browser (localStorage). Backups from any older version import fine — they’re upgraded automatically. Export a copy now and then in case the browser clears it.</p>
     </div>
 
-    <footer>Cycle Day Tracker v2.3 · SY 2026–27 · data stays on this device</footer>
+    <footer>Cycle Day Tracker v2.5 · SY 2026–27 · data stays on this device</footer>
   </section>
 </div>
 
@@ -519,7 +529,7 @@ footer{
 (function(){
 "use strict";
 var KEY = "cycleTracker.v1";   /* same key since v1.0 — schema migrated in place */
-var VERSION_LABEL = "v2.3";
+var VERSION_LABEL = "v2.5";
 
 /* ---------------- no-class reasons ---------------- */
 var REASONS = ["Weather suspension","Holiday","School event","Term break","Day 0","Day 0 · Async","Other"];
@@ -534,7 +544,7 @@ var RMETA = {
 };
 
 /* ---------------- event types (color-coded academic tags) ---------------- */
-var EVENT_TYPES = ["Homework","Graded Seatwork","Quiz","Test","Oral Recitation","Exam"];
+var EVENT_TYPES = ["Homework","Graded Seatwork","Quiz","Test","Oral Recitation","Exam","Bring/Prepare"];
 var ABSENCE_REASONS = ["Illness","Vacation","Family","Other"];
 var AMETA = {
   "Illness":{emoji:"🤒"}, "Vacation":{emoji:"🌴"}, "Family":{emoji:"👪"}, "Other":{emoji:"📌"}
@@ -545,7 +555,8 @@ var EMETA = {
   "Quiz":{emoji:"✏️", bg:"#E19B00"},
   "Test":{emoji:"📋", bg:"#7B5CD6"},
   "Oral Recitation":{emoji:"🗣️", bg:"#159E9E"},
-  "Exam":{emoji:"🎓", bg:"#C0392B"}
+  "Exam":{emoji:"🎓", bg:"#C0392B"},
+  "Bring/Prepare":{emoji:"🎒", bg:"#5A6ACF"}
 };
 
 /* ---------------- default class schedule (from the school's KG timetable) ---------------- */
@@ -562,7 +573,7 @@ var DEFAULT_TIMETABLE = {
 /* ---------------- default / seed state (schema v5) ---------------- */
 function seedState(){
   return {
-    version:8,
+    version:10,
     flags:{},
     overrides:[],
     absences:[],
@@ -600,7 +611,7 @@ function migrate(s){
   if(!s.flags || typeof s.flags!=="object") s.flags = {};
   if(!Array.isArray(s.overrides)) s.overrides = [];
   if(!Array.isArray(s.absences)) s.absences = [];
-  s.version = 8;
+  s.version = 10;
   return s;
 }
 function load(){
@@ -680,13 +691,34 @@ function evByDate(nc){
   });
   return m;
 }
-function addEvent(dateStr, type, note){
-  var e = {id:gid(), type:type, note:note||""};
+function posFieldsFor(dateStr){
   var ci = cycleInfo(dateStr);
-  if(ci){ e.termId = termOf(dateStr).id; e.cycle = ci.cycle; e.day = ci.day; }
-  else { e.date = dateStr; }
+  if(ci) return {termId: termOf(dateStr).id, cycle: ci.cycle, day: ci.day};
+  return {date: dateStr};
+}
+function addEvent(givenDate, type, note, dueDate, subject){
+  var e = {id:gid(), type:type, note:note||""};
+  if(subject) e.subject = subject;
+  var due = (dueDate && dueDate!==givenDate) ? dueDate : givenDate;
+  var pf = posFieldsFor(due);
+  e.termId = pf.termId; e.cycle = pf.cycle; e.day = pf.day; if(pf.date) e.date = pf.date;
+  if(dueDate && dueDate!==givenDate){ e.assign = posFieldsFor(givenDate); }
   state.events.push(e);
   save();
+}
+function setEventDue(id, dueDate){
+  state.events.forEach(function(e){
+    if(e.id===id){
+      var pf = posFieldsFor(dueDate);
+      delete e.termId; delete e.cycle; delete e.day; delete e.date;
+      e.termId=pf.termId; e.cycle=pf.cycle; e.day=pf.day; if(pf.date) e.date=pf.date;
+    }
+  });
+  save();
+}
+function assignedDateOf(e, nc){
+  if(!e.assign) return null;
+  return dateOfEvent({termId:e.assign.termId, cycle:e.assign.cycle, day:e.assign.day, date:e.assign.date}, nc);
 }
 function removeEvent(id){
   state.events = state.events.filter(function(e){ return e.id!==id; });
@@ -953,6 +985,30 @@ function schedFor(dayNum){
   var rows = state.timetable && state.timetable[String(dayNum)];
   return Array.isArray(rows) ? rows : [];
 }
+var NON_SUBJECTS = /^(preparation routine|health break|general assembly|circle time|recess|dismissal)$/i;
+function subjectList(){
+  var seen={}, out=[];
+  for(var dn=1; dn<=state.cycleLength; dn++){
+    schedFor(dn).forEach(function(r){
+      var nm=(r.s||"").trim();
+      if(nm && !NON_SUBJECTS.test(nm) && !seen[nm]){ seen[nm]=1; out.push(nm); }
+    });
+  }
+  out.sort(function(a,b){ return a.toLowerCase()<b.toLowerCase()?-1:1; });
+  return out;
+}
+function subjectsInDay(dayNum){ return schedFor(dayNum).map(function(r){ return (r.s||"").trim(); }); }
+function nextSubjectDate(fromExclusive, subject, nc){
+  nc = nc || ncMap();
+  var d = fromExclusive, g=0;
+  while(g++ < WALK_LIMIT){
+    d = nextClassDay(d, nc);
+    if(!d) return null;
+    var ci = cycleInfo(d, nc);
+    if(ci && subjectsInDay(ci.day).indexOf(subject)!==-1) return d;
+  }
+  return null;
+}
 function schedRowsHTML(dayNum){
   var rows = schedFor(dayNum);
   if(!rows.length) return "";
@@ -1134,12 +1190,14 @@ function renderToday(){
       var e = x.e;
       var dayTag = e.day ? ' · Day '+e.day : '';
       var pin = e.date ? ' 📌' : '';
+      var gA = assignedDateOf(e, nc);
+      var givenTag = gA ? '<span class="evu-note" style="color:var(--muted)">given '+human(gA)+'</span>' : '';
       return '<div class="evu-item'+(e.done?' done':'')+'">'+
         '<button class="evu-check'+(e.done?' on':'')+'" data-evcheck="'+e.id+'" aria-label="'+(e.done?'Mark not done':'Mark done')+'">'+(e.done?'✓':'')+'</button>'+
         '<button class="evu-body" data-evdate="'+x.d+'" style="text-align:left;display:block;background:none;flex:1;min-width:0">'+
-        '<span class="evu-tag" style="background:'+EMETA[e.type].bg+'">'+EMETA[e.type].emoji+' '+e.type+'</span> '+
+        '<span class="evu-tag" style="background:'+EMETA[e.type].bg+'">'+EMETA[e.type].emoji+' '+e.type+(e.subject?' · '+esc(e.subject):'')+'</span> '+
         '<span class="evu-date">'+(x.d===t?"Today":human(x.d,true))+dayTag+pin+'</span>'+
-        (e.note?'<span class="evu-note">'+esc(e.note)+'</span>':'')+
+        (e.note?'<span class="evu-note">'+esc(e.note)+'</span>':'')+givenTag+
         '</button><span class="lg-arrow" style="color:var(--muted)">›</span></div>';
     }).join("");
     evList.querySelectorAll("[data-evdate]").forEach(function(b){
@@ -1339,6 +1397,8 @@ function renderCal(){
   var ov = _ov();
   var absm = absMap();
   var ev = evByDate(nc);
+  var gvn = {};
+  state.events.forEach(function(e){ var g=assignedDateOf(e, nc); if(g) gvn[g]=true; });
   var t = todayStr();
   document.getElementById("calLabel").textContent = MONTHS[calM]+" "+calY;
   /* event legend */
@@ -1408,13 +1468,21 @@ function renderCal(){
     if(!wknd){
       var evs = ev[s]||[];
       if(evs.length){
+        var pend = evs.filter(function(x){ return !x.done; });
         var dotHtml = evs.slice(0,4).map(function(x){
           return '<i class="'+(x.done?'done':'')+'" style="background:'+EMETA[x.type].bg+'"></i>';
         }).join("");
         if(evs.length>4) dotHtml += '<span class="more">+</span>';
         inner += '<span class="edots">'+dotHtml+'</span>';
-        aria += ", "+evs.length+" event"+(evs.length>1?"s":"");
+        if(pend.length){
+          cls+=" hasprep";
+          var PRIO=["Exam","Test","Quiz","Oral Recitation","Graded Seatwork","Bring/Prepare","Homework"];
+          var top=pend.slice().sort(function(a,b){ return PRIO.indexOf(a.type)-PRIO.indexOf(b.type); })[0];
+          inner += '<span class="prepbar" style="background:'+EMETA[top.type].bg+'"></span>';
+        }
+        aria += ", "+evs.length+" event"+(evs.length>1?"s":"")+(pend.length?", needs prep":"");
       }
+      if(gvn[s]){ inner += '<span class="givendot" title="assigned"></span>'; aria += ", homework given"; }
     }
     html += '<button class="'+cls+'" data-date="'+s+'" aria-label="'+aria+'">'+inner+'</button>';
   }
@@ -1501,18 +1569,30 @@ function openDaySheet(s){
     (ci ? '<p class="hint" style="margin:0 0 8px">Tied to Cycle '+ci.cycle+' Day '+ci.day+' — if classes get cancelled, these shift to the new date of Day '+ci.day+' automatically.</p>'
         : '<p class="hint" style="margin:0 0 8px">This day has no cycle day, so events added here stay pinned to the date.</p>');
   html += '<div class="ev-list" id="dsEvList">'+ (evs.length ? evs.map(function(x){
-      return '<div class="ev-row'+(x.done?' done':'')+'">'+
+      var gdate = assignedDateOf(x, nc);
+      var dueLine = '<div class="ev-due"><span class="ev-due-lbl">'+(gdate?'Given '+human(gdate)+' · ':'')+'Due</span>'+
+        '<input class="ev-due-in" type="date" data-evdue="'+x.id+'" value="'+(dateOfEvent(x,nc)||"")+'"></div>';
+      return '<div class="ev-row2'+(x.done?' done':'')+'">'+
+        '<div class="ev-row">'+
         '<button class="ev-done-btn'+(x.done?' on':'')+'" data-evdone="'+x.id+'" aria-label="'+(x.done?'Mark not done':'Mark done')+'">'+(x.done?'✓':'○')+'</button>'+
-        '<span class="ev-chip" style="background:'+EMETA[x.type].bg+'">'+EMETA[x.type].emoji+' '+x.type+(x.date?' 📌':'')+'</span>'+
-        '<input class="ev-note-in" data-evnote="'+x.id+'" value="'+esc(x.note||"")+'" placeholder="Add what to do / study…" autocapitalize="sentences">'+
-        '<button class="ev-del" data-evid="'+x.id+'" aria-label="Delete event">✕</button></div>';
+        '<span class="ev-chip" style="background:'+EMETA[x.type].bg+'">'+EMETA[x.type].emoji+' '+x.type+(x.subject?' · '+esc(x.subject):'')+(x.date?' 📌':'')+'</span>'+
+        '<input class="ev-note-in" data-evnote="'+x.id+'" value="'+esc(x.note||"")+'" placeholder="Add what to do / study / bring…" autocapitalize="sentences">'+
+        '<button class="ev-del" data-evid="'+x.id+'" aria-label="Delete event">✕</button></div>'+
+        dueLine+'</div>';
     }).join("") : '<div class="hint" style="margin:0">None yet — add one below.</div>') +'</div>';
   html += '<div class="ev-saved" id="dsSaved"></div>';
   html += '<label style="display:block;font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:5px">Add an item — tap a type below (you can fill the description before or after):</label>';
-  html += '<input id="dsNote" type="text" placeholder="Description, e.g. Math — study fractions p.12" autocapitalize="sentences" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px">';
+  html += '<input id="dsNote" type="text" placeholder="Description, e.g. Math — study fractions p.12 / bring art materials" autocapitalize="sentences" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px">';
+  var subs = subjectList();
+  html += '<div class="ev-due" style="margin-bottom:8px"><span class="ev-due-lbl">Subject</span>'+
+    '<select id="dsSubject" class="ev-due-in"><option value="">— none —</option>'+
+    subs.map(function(x){ return '<option value="'+esc(x)+'">'+esc(x)+'</option>'; }).join("")+'</select></div>';
+  html += '<div class="ev-due" style="margin-bottom:4px"><span class="ev-due-lbl">Due date</span><input class="ev-due-in" type="date" id="dsDue" value="'+s+'"></div>';
+  html += '<p class="hint" id="dsDueHint" style="margin:0 0 10px">Pick a subject and the due date auto-fills to its next class. Or set the date yourself.</p>';
   html += '<div class="ev-add-pills">'+EVENT_TYPES.map(function(x){
       return '<button data-evtype="'+x+'" style="background:'+EMETA[x].bg+'">+ '+EMETA[x].emoji+' '+x+'</button>';
-    }).join("")+'</div></div>';
+    }).join("")+'</div>';
+  html += '</div>';
 
   html += '<hr class="divider">';
 
@@ -1539,7 +1619,15 @@ function openDaySheet(s){
   /* wire events */
   sheet.querySelectorAll("[data-evtype]").forEach(function(b){
     b.addEventListener("click", function(){
-      addEvent(s, b.dataset.evtype, sheet.querySelector("#dsNote").value.trim());
+      var subjEl = sheet.querySelector("#dsSubject");
+      var subjVal = subjEl ? subjEl.value : "";
+      var dueEl = sheet.querySelector("#dsDue");
+      var dueVal = (dueEl && dueEl.value) ? dueEl.value : s;
+      if(subjVal && dueVal===s){
+        var auto = nextSubjectDate(s, subjVal, nc);
+        if(auto) dueVal = auto;
+      }
+      addEvent(s, b.dataset.evtype, sheet.querySelector("#dsNote").value.trim(), dueVal, subjVal);
       openDaySheet(s);        /* re-open to show the new entry */
       refreshBehindSheet();
       /* focus the description box of the item just added (last of its type) */
@@ -1560,6 +1648,24 @@ function openDaySheet(s){
       openDaySheet(s);
       refreshBehindSheet();
     });
+  });
+  sheet.querySelectorAll("[data-evdue]").forEach(function(inp){
+    inp.addEventListener("change", function(){
+      if(inp.value){ setEventDue(inp.dataset.evdue, inp.value); openDaySheet(s); refreshBehindSheet(); }
+    });
+  });
+  var subjSel = sheet.querySelector("#dsSubject");
+  var dueInp = sheet.querySelector("#dsDue");
+  var dueHint = sheet.querySelector("#dsDueHint");
+  var dueTouched = false;
+  if(dueInp) dueInp.addEventListener("input", function(){ dueTouched = true; });
+  if(subjSel) subjSel.addEventListener("change", function(){
+    var subj = subjSel.value;
+    if(subj && !dueTouched){
+      var nd = nextSubjectDate(s, subj, nc);
+      if(nd){ if(dueInp) dueInp.value = nd; if(dueHint) dueHint.textContent = "Due next "+subj+": "+human(nd,true)+" (auto)"; }
+      else { if(dueHint) dueHint.textContent = "No upcoming "+subj+" class found — set a date manually."; }
+    } else if(!subj && dueHint){ dueHint.textContent = "Pick a subject and the due date auto-fills to its next class. Or set the date yourself."; }
   });
   sheet.querySelectorAll("[data-evnote]").forEach(function(inp){
     var flash=function(){
