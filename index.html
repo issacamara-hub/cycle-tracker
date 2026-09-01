@@ -176,6 +176,8 @@ header .sub{font-size:.72rem;color:#AEB9D2;font-weight:500;letter-spacing:.08em;
 }
 .cal-cell .cchip.pe{background:var(--pe);color:#fff}
 .cal-cell .cchip.d0{background:var(--r-dayzero);color:#fff}
+.cal-cell.precycle{background:var(--grey-day)}
+.cal-cell.precycle .dnum{color:#B4BCCB}
 .cal-cell.dayzero{background:#EDEEF9}
 .cal-cell.dayzero.async{background:#E3F3F6}
 .cal-cell .cchip.d0.as{background:var(--r-async)}
@@ -504,7 +506,7 @@ footer{
       <p class="hint">Data lives only in this browser (localStorage). Backups from any older version import fine — they’re upgraded automatically. Export a copy now and then in case the browser clears it.</p>
     </div>
 
-    <footer>Cycle Day Tracker v2.5 · SY 2026–27 · data stays on this device</footer>
+    <footer>Cycle Day Tracker v2.7 · SY 2026–27 · data stays on this device</footer>
   </section>
 </div>
 
@@ -529,7 +531,7 @@ footer{
 (function(){
 "use strict";
 var KEY = "cycleTracker.v1";   /* same key since v1.0 — schema migrated in place */
-var VERSION_LABEL = "v2.5";
+var VERSION_LABEL = "v2.7";
 
 /* ---------------- no-class reasons ---------------- */
 var REASONS = ["Weather suspension","Holiday","School event","Term break","Day 0","Day 0 · Async","Other"];
@@ -573,7 +575,7 @@ var DEFAULT_TIMETABLE = {
 /* ---------------- default / seed state (schema v5) ---------------- */
 function seedState(){
   return {
-    version:10,
+    version:11,
     flags:{},
     overrides:[],
     absences:[],
@@ -611,7 +613,7 @@ function migrate(s){
   if(!s.flags || typeof s.flags!=="object") s.flags = {};
   if(!Array.isArray(s.overrides)) s.overrides = [];
   if(!Array.isArray(s.absences)) s.absences = [];
-  s.version = 10;
+  s.version = 11;
   return s;
 }
 function load(){
@@ -759,6 +761,13 @@ function inDomain(s){
   if(!g) return true;
   return !(g.end && s>g.end);
 }
+/* dates before a term's declared start are "pre-cycle" (Cycle 0 · Day 0) */
+function isPreCycle(s){
+  if(!isSchoolDay(s)) return false;
+  var T = governingTerm(s) || state.terms[0];
+  if(!T || !T.start) return false;
+  return s < T.start;
+}
 function isDayZero(s, nc){
   var e = (nc||ncMap())[s];
   if(e && e.reason && e.reason.indexOf("Day 0")===0) return true;
@@ -781,6 +790,7 @@ function isBreakDay(s, nc){
 function isClassDay(s, nc){
   if(!isSchoolDay(s)) return false;
   if(!inDomain(s)) return false;
+  if(isPreCycle(s)) return false;
   if((nc||ncMap())[s]) return false;
   var o=_ov()[s];
   if(o && o.day===0) return false;
@@ -803,6 +813,17 @@ function setOverride(date, cycle, day){
 function clearOverride(date){
   state.overrides = (state.overrides||[]).filter(function(o){ return o.date!==date; });
   save();
+}
+/* set a date as the first day of cycles for its term: anchor = Cycle 1 Day 1, floor before it */
+function setCycleStart(date){
+  var T = termOf(date);
+  T.start = date;
+  T.anchor = {date:date, cycle:1, day:1};
+  save();
+}
+function clearCycleStart(date){
+  var T = termOf(date);
+  if(T){ delete T.start; save(); }
 }
 /* ---------------- personal absences (do NOT affect the cycle — school still held) ---------------- */
 function absMap(){ var m={}; (state.absences||[]).forEach(function(a){ m[a.date]=a; }); return m; }
@@ -1127,6 +1148,15 @@ function renderToday(){
       html += '<div><span class="badge off">'+(T4.name||'Next term')+' starts '+human(nx4,true)+' · Cycle '+nci4.cycle+' Day '+nci4.day+(isPEDay(nci4.day)?" 🏃 PE":"")+'</span></div>';
     } else {
       html += '<div class="cycle-line">Classes ended '+(g&&g.end?human(g.end,true):"")+'. When the new term is announced, tap this card to start it.</div>';
+    }
+  } else if(isPreCycle(t)){
+    html += '<div class="eyebrow" style="color:var(--muted)">No school</div>';
+    html += '<div class="big-day" style="font-size:3rem;color:var(--muted)">🌴</div>';
+    var st0 = termOf(t) && termOf(t).start;
+    html += '<div class="cycle-line">Break / before the school year'+(st0?' — classes start '+human(st0,true):'')+'</div>';
+    if(st0){
+      var nxp = nextClassDay(t, nc);
+      if(nxp){ var ncip=cycleInfo(nxp,nc); if(ncip) html += '<div><span class="badge off">First cycle day: '+human(nxp,true)+' · Cycle '+ncip.cycle+' Day '+ncip.day+'</span></div>'; }
     }
   } else {
     html += '<div class="eyebrow" style="color:var(--muted)">Weekend</div>';
@@ -1456,6 +1486,9 @@ function renderCal(){
       cls+=" brk";
       inner += '<span class="bmark">brk</span>';
       aria+=", term break";
+    } else if(isPreCycle(s)){
+      cls+=" precycle";
+      aria+=", no school";
     } else if(ci){
       var pe = isPEDay(ci.day);
       inner += '<span class="cchip'+(pe?' pe':'')+'">D'+ci.day+'</span>';
@@ -1509,6 +1542,7 @@ function openDaySheet(s){
   var brk = isBreakDay(s, nc);
   var status;
   if(ci) status = 'Cycle '+ci.cycle+' · Day '+ci.day+(ci.ovr?' · ✎ set by school':'')+(isPEDay(ci.day)?' · 🏃 PE day':'')+(isAsyncDay(s)?' · 🏠 asynchronous':'')+(isAbsent(s)?' · 🚫 absent':'');
+  else if(isPreCycle(s)) status = '🌴 No school — break / before the school year';
   else if(overrideOf(s) && overrideOf(s).day===0) status = '0️⃣ Day 0 (set by school) — the cycle does not advance';
   else if(e && e.reason==="Day 0 · Async") status = '💻 Day 0 · Asynchronous — learning from home, cycle does not advance'+(e.note?' ('+esc(e.note)+')':'');
   else if(e && e.reason==="Day 0") status = '0️⃣ Day 0 — classes, but the cycle does not advance'+(e.note?' ('+esc(e.note)+')':'');
@@ -1541,6 +1575,15 @@ function openDaySheet(s){
       '<div class="field" style="margin:0"><label for="ovD">Day # (0–'+state.cycleLength+')</label><input type="number" id="ovD" min="0" max="'+state.cycleLength+'" inputmode="numeric" value="'+defD+'"></div></div>'+
       '<button class="pri-btn" id="ovSave">'+(curOv?'Update this date’s cycle day':'Set this date’s cycle day')+'</button>'+
       (curOv?'<button class="sec-btn warn-btn" id="ovClear">Remove adjustment — compute normally</button>':'')+
+      '</div>';
+    var Tst = termOf(s);
+    var isStart = Tst && Tst.start===s;
+    html += '<hr class="divider">';
+    html += '<div class="field"><label>Start of cycles</label>'+
+      '<p class="hint" style="margin:0 0 8px">Make this date <b>Cycle 1 · Day 1</b>. Every day before it is treated as <b>no school</b> (break / summer) — blank and not counted.</p>'+
+      (isStart
+        ? '<div class="hint" style="margin:0 0 8px;color:var(--ok);font-weight:700">✓ This is currently the first day of cycles.</div><button class="sec-btn warn-btn" id="csClear">Remove start — compute normally before this too</button>'
+        : '<button class="pri-btn" id="csSet">Set this date as the first cycle day</button>')+
       '</div>';
   }
   /* attendance — only where school is actually held */
@@ -1725,6 +1768,14 @@ function openDaySheet(s){
   });
   var ovClearBtn = sheet.querySelector("#ovClear");
   if(ovClearBtn) ovClearBtn.addEventListener("click", function(){ clearOverride(s); closeSheet(); refreshAll(); });
+  var csSetBtn = sheet.querySelector("#csSet");
+  if(csSetBtn) csSetBtn.addEventListener("click", function(){
+    if(confirm("Set "+human(s,true)+" as Cycle 1 · Day 1?\n\nDays before it will show Cycle 0 · Day 0. This re-numbers cycles from this date forward.")){
+      setCycleStart(s); closeSheet(); refreshAll();
+    }
+  });
+  var csClearBtn = sheet.querySelector("#csClear");
+  if(csClearBtn) csClearBtn.addEventListener("click", function(){ clearCycleStart(s); closeSheet(); refreshAll(); });
   var ncMark = sheet.querySelector("#dsNcMark");
   if(ncMark) ncMark.addEventListener("click", function(){
     openReasonPicker(s, false);
@@ -1854,6 +1905,7 @@ function termRowHTML(T){
     '<div class="set-row"><label>Anchor date</label><input class="t-date" type="date" value="'+T.anchor.date+'"></div>'+
     '<div class="set-row"><label>= Cycle #</label><input class="t-cycle" type="number" min="1" inputmode="numeric" value="'+T.anchor.cycle+'"></div>'+
     '<div class="set-row"><label>= Day #</label><input class="t-day" type="number" min="1" inputmode="numeric" value="'+T.anchor.day+'"></div>'+
+    '<div class="set-row"><label>First day (start of cycles)</label><input class="t-start" type="date" value="'+(T.start||"")+'"></div>'+
     '<div class="set-row"><label>Last day of classes</label><input class="t-end" type="date" value="'+(T.end||"")+'"></div>';
 }
 function attachTermDel(div){
@@ -1920,9 +1972,10 @@ document.getElementById("saveSettings").addEventListener("click", function(){
     var c = parseInt(row.querySelector(".t-cycle").value,10);
     var d = parseInt(row.querySelector(".t-day").value,10);
     var end = row.querySelector(".t-end").value || null;
+    var start = row.querySelector(".t-start").value || null;
     if(!date || !(c>=1) || !(d>=1) || d>len){ termErr = name+" needs an anchor date, cycle ≥ 1, and day between 1 and "+len+"."; return; }
     if(end && end<date){ termErr = name+"'s last day can't be before its anchor."; return; }
-    terms.push({id: row.dataset.tid || ("t"+gid()), name:name, anchor:{date:date, cycle:c, day:d}, end:end});
+    terms.push({id: row.dataset.tid || ("t"+gid()), name:name, anchor:{date:date, cycle:c, day:d}, end:end, start:start});
   });
   if(termErr){ msg.textContent=termErr; msg.className="msg err"; return; }
   if(!terms.length){ msg.textContent="At least one term is required."; msg.className="msg err"; return; }
