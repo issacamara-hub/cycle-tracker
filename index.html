@@ -176,6 +176,8 @@ header .sub{font-size:.72rem;color:#AEB9D2;font-weight:500;letter-spacing:.08em;
 }
 .cal-cell .cchip.pe{background:var(--pe);color:#fff}
 .cal-cell .cchip.d0{background:var(--r-dayzero);color:#fff}
+.cal-cell .cchip.c0d0{background:#5B7083;color:#fff;font-size:.62rem}
+.cal-cell.cyclezero{background:#EEF1F4}
 .cal-cell.precycle{background:var(--grey-day)}
 .cal-cell.precycle .dnum{color:#B4BCCB}
 .cal-cell.dayzero{background:#EDEEF9}
@@ -506,7 +508,7 @@ footer{
       <p class="hint">Data lives only in this browser (localStorage). Backups from any older version import fine — they’re upgraded automatically. Export a copy now and then in case the browser clears it.</p>
     </div>
 
-    <footer>Cycle Day Tracker v2.7 · SY 2026–27 · data stays on this device</footer>
+    <footer>Cycle Day Tracker v2.8 · SY 2026–27 · data stays on this device</footer>
   </section>
 </div>
 
@@ -531,7 +533,7 @@ footer{
 (function(){
 "use strict";
 var KEY = "cycleTracker.v1";   /* same key since v1.0 — schema migrated in place */
-var VERSION_LABEL = "v2.7";
+var VERSION_LABEL = "v2.8";
 
 /* ---------------- no-class reasons ---------------- */
 var REASONS = ["Weather suspension","Holiday","School event","Term break","Day 0","Day 0 · Async","Other"];
@@ -825,6 +827,21 @@ function clearCycleStart(date){
   var T = termOf(date);
   if(T){ delete T.start; save(); }
 }
+/* Cycle 0 · Day 0 = a school day outside the cycle count (e.g. orientation week) */
+function isCycleZero(s){ var o=_ov()[s]; return !!(o && o.cycle===0 && o.day===0); }
+function markCycleZero(fromDate, throughDate){
+  var d = fromDate, guard=0;
+  var end = (throughDate && throughDate>fromDate) ? throughDate : fromDate;
+  while(d<=end && guard++<120){
+    if(isSchoolDay(d)) setOverrideSilent(d, 0, 0);
+    d = addDays(d,1);
+  }
+  save();
+}
+function setOverrideSilent(date, cycle, day){
+  state.overrides = (state.overrides||[]).filter(function(o){ return o.date!==date; });
+  state.overrides.push({date:date, cycle:cycle, day:day});
+}
 /* ---------------- personal absences (do NOT affect the cycle — school still held) ---------------- */
 function absMap(){ var m={}; (state.absences||[]).forEach(function(a){ m[a.date]=a; }); return m; }
 function isAbsent(s){ return !!absMap()[s]; }
@@ -1108,6 +1125,12 @@ function renderToday(){
       html += '<span class="'+cls+'"></span>';
     }
     html += '</div><div class="dots-caption">Cycle '+ci.cycle+' · square dots are PE</div>';
+  } else if(isCycleZero(t)){
+    html += '<div class="eyebrow" style="color:#5B7083">Orientation</div>';
+    html += '<div class="big-day" style="font-size:3.4rem;color:#5B7083"><span class="big-word">CYCLE</span> 0 · <span class="big-word">DAY</span> 0</div>';
+    html += '<div class="cycle-line">School today, but outside the cycle count</div>';
+    var nxz = nextClassDay(t, nc);
+    if(nxz){ var nciz = cycleInfo(nxz, nc); if(nciz) html += '<div><span class="badge off">First cycle day: '+human(nxz)+' · Cycle '+nciz.cycle+' Day '+nciz.day+'</span></div>'; }
   } else if(ov[t] && ov[t].day===0){
     html += '<div class="eyebrow" style="color:var(--r-dayzero)">Cycle paused ✎</div>';
     html += '<div class="big-day" style="color:var(--r-dayzero)"><span class="big-word">DAY</span> 0</div>';
@@ -1456,7 +1479,10 @@ function renderCal(){
     var absent = !!absm[s];
     if(wknd){ cls+=" weekend"; aria+=", weekend"; }
     else if(ovc){
-      if(ovc.day===0){
+      if(ovc.day===0 && ovc.cycle===0){
+        cls+=" cyclezero"; inner += '<span class="cchip c0d0">C0·D0</span>';
+        aria+=", Cycle 0 Day 0, orientation";
+      } else if(ovc.day===0){
         cls+=" dayzero ovr"; inner += '<span class="cchip d0">D0</span><span class="ovmark">✎</span>';
         aria+=", Day 0 set by school";
       } else {
@@ -1542,6 +1568,7 @@ function openDaySheet(s){
   var brk = isBreakDay(s, nc);
   var status;
   if(ci) status = 'Cycle '+ci.cycle+' · Day '+ci.day+(ci.ovr?' · ✎ set by school':'')+(isPEDay(ci.day)?' · 🏃 PE day':'')+(isAsyncDay(s)?' · 🏠 asynchronous':'')+(isAbsent(s)?' · 🚫 absent':'');
+  else if(isCycleZero(s)) status = '🅾️ Cycle 0 · Day 0 — orientation (school, not counted)';
   else if(isPreCycle(s)) status = '🌴 No school — break / before the school year';
   else if(overrideOf(s) && overrideOf(s).day===0) status = '0️⃣ Day 0 (set by school) — the cycle does not advance';
   else if(e && e.reason==="Day 0 · Async") status = '💻 Day 0 · Asynchronous — learning from home, cycle does not advance'+(e.note?' ('+esc(e.note)+')':'');
@@ -1584,6 +1611,16 @@ function openDaySheet(s){
       (isStart
         ? '<div class="hint" style="margin:0 0 8px;color:var(--ok);font-weight:700">✓ This is currently the first day of cycles.</div><button class="sec-btn warn-btn" id="csClear">Remove start — compute normally before this too</button>'
         : '<button class="pri-btn" id="csSet">Set this date as the first cycle day</button>')+
+      '</div>';
+    /* Cycle 0 · Day 0 (orientation) */
+    var isCZ = isCycleZero(s);
+    html += '<hr class="divider">';
+    html += '<div class="field"><label>Cycle 0 · Day 0 (orientation)</label>'+
+      '<p class="hint" style="margin:0 0 8px">For orientation-week days: school is held but they are <b>not</b> part of the cycle count. They show as <b>C0·D0</b>, not blank.</p>'+
+      (isCZ
+        ? '<div class="hint" style="margin:0 0 8px;color:var(--ok);font-weight:700">✓ Marked Cycle 0 · Day 0.</div><button class="sec-btn warn-btn" id="czClear">Remove Cycle 0 mark</button>'
+        : '<div class="ev-due" style="margin-bottom:8px"><span class="ev-due-lbl">Through (optional, for a whole week)</span><input class="ev-due-in" type="date" id="czThrough" min="'+s+'"></div>'+
+          '<button class="pri-btn" id="czSet">Mark as Cycle 0 · Day 0</button>')+
       '</div>';
   }
   /* attendance — only where school is actually held */
@@ -1768,6 +1805,14 @@ function openDaySheet(s){
   });
   var ovClearBtn = sheet.querySelector("#ovClear");
   if(ovClearBtn) ovClearBtn.addEventListener("click", function(){ clearOverride(s); closeSheet(); refreshAll(); });
+  var czSetBtn = sheet.querySelector("#czSet");
+  if(czSetBtn) czSetBtn.addEventListener("click", function(){
+    var thr = (sheet.querySelector("#czThrough")||{}).value || "";
+    markCycleZero(s, thr);
+    closeSheet(); refreshAll();
+  });
+  var czClearBtn = sheet.querySelector("#czClear");
+  if(czClearBtn) czClearBtn.addEventListener("click", function(){ clearOverride(s); closeSheet(); refreshAll(); });
   var csSetBtn = sheet.querySelector("#csSet");
   if(csSetBtn) csSetBtn.addEventListener("click", function(){
     if(confirm("Set "+human(s,true)+" as Cycle 1 · Day 1?\n\nDays before it will show Cycle 0 · Day 0. This re-numbers cycles from this date forward.")){
