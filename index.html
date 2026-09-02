@@ -511,7 +511,7 @@ footer{
       <p class="hint">Data lives only in this browser (localStorage). Backups from any older version import fine — they’re upgraded automatically. Export a copy now and then in case the browser clears it.</p>
     </div>
 
-    <footer>Cycle Day Tracker v2.9 · SY 2026–27 · data stays on this device</footer>
+    <footer>Cycle Day Tracker v3.0 · SY 2026–27 · data stays on this device</footer>
   </section>
 </div>
 
@@ -536,7 +536,7 @@ footer{
 (function(){
 "use strict";
 var KEY = "cycleTracker.v1";   /* same key since v1.0 — schema migrated in place */
-var VERSION_LABEL = "v2.9";
+var VERSION_LABEL = "v3.0";
 
 /* ---------------- no-class reasons ---------------- */
 var REASONS = ["Weather suspension","Holiday","School event","Term break","Day 0","Day 0 · Async","Other"];
@@ -551,7 +551,7 @@ var RMETA = {
 };
 
 /* ---------------- event types (color-coded academic tags) ---------------- */
-var EVENT_TYPES = ["Homework","Graded Seatwork","Quiz","Test","Oral Recitation","Exam","Bring/Prepare"];
+var EVENT_TYPES = ["Homework","Graded Seatwork","Quiz","Test","Oral Recitation","Oral Test","Exam","Bring/Prepare"];
 var ABSENCE_REASONS = ["Illness","Vacation","Family","Other"];
 var AMETA = {
   "Illness":{emoji:"🤒"}, "Vacation":{emoji:"🌴"}, "Family":{emoji:"👪"}, "Other":{emoji:"📌"}
@@ -562,6 +562,7 @@ var EMETA = {
   "Quiz":{emoji:"✏️", bg:"#E19B00"},
   "Test":{emoji:"📋", bg:"#7B5CD6"},
   "Oral Recitation":{emoji:"🗣️", bg:"#159E9E"},
+  "Oral Test":{emoji:"🎙️", bg:"#B5651D"},
   "Exam":{emoji:"🎓", bg:"#C0392B"},
   "Bring/Prepare":{emoji:"🎒", bg:"#5A6ACF"}
 };
@@ -1552,7 +1553,7 @@ function renderCal(){
         inner += '<span class="edots">'+dotHtml+'</span>';
         if(pend.length){
           cls+=" hasprep";
-          var PRIO=["Exam","Test","Quiz","Oral Recitation","Graded Seatwork","Bring/Prepare","Homework"];
+          var PRIO=["Exam","Test","Oral Test","Quiz","Oral Recitation","Graded Seatwork","Bring/Prepare","Homework"];
           var top=pend.slice().sort(function(a,b){ return PRIO.indexOf(a.type)-PRIO.indexOf(b.type); })[0];
           inner += '<span class="prepbar" style="background:'+EMETA[top.type].bg+'"></span>';
         }
